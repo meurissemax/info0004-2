@@ -72,7 +72,7 @@ public:
 private:
 	/// Vectors of special points and chars in the paint file.
 	const std::vector<char> SPECIAL_POINTS{'x', 'y'};
-	const std::vector<char> SPECIAL_CHARS{'#', '{', '}', '(', ')', '*', '/', char(32)}; // char(32) = ' '
+	const std::vector<char> SPECIAL_CHARS{'#', '{', '}', '(', ')', '*', '/', char(32)}; /// char(32) = ' '
 
 	/// The file that the parser parse.
 	std::string filename;
@@ -136,7 +136,7 @@ private:
 	/* Utility methods */
 	/*******************/
 	bool is_in(const std::vector<char>& v, const char& c) const;
-	bool is_in(const std::vector<token>& v, const token& t) const;
+	bool is_in(const std::vector<token>& v, const token& t, token& exist) const;
 };
 
 #endif

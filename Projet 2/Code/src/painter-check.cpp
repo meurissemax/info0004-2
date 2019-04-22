@@ -1,13 +1,13 @@
 /**
  * Object-oriented programming projects - Project 2
- * A parser for a painting language
+ * Parsing a painting language
  *
  * This file is the main file of the program.
  * It reads the user's entries and creates the parser.
  * The parser parse the file and displays its statistics if no error has occurred.
  *
- * @author Maxime MEURISSE <m.meurisse@student.uliege.be> (20161278)
- * @date 04/14/2019
+ * @author Maxime MEURISSE (m.meurisse@student.uliege.be) - 20161278
+ * @version 2019.04.22
  */
 
 #include <string>

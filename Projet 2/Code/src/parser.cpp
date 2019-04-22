@@ -1,11 +1,11 @@
 /**
  * Object-oriented programming projects - Project 2
- * A parser for a painting language
+ * Parsing a painting language
  *
  * This file is the implementation of the 'Parser' class.
  *
- * @author Maxime MEURISSE <m.meurisse@student.uliege.be> (20161278)
- * @date 04/15/2019
+ * @author Maxime MEURISSE (m.meurisse@student.uliege.be) - 20161278
+ * @version 2019.04.22
  */
 
 #include <fstream>
@@ -436,29 +436,30 @@ void Parser::parse_fill() {
  */
 void Parser::parse_name(const unsigned int& parse_name_type) {
 	token name = next_token();
+	token exist;
 
 	if(name.type != STRING)
 		print_error(name, "expected string type for name (got '" + name.content + "').");
 
 	switch(parse_name_type) {
 		case NEW_SHAPE:
-			if(is_in(shapes, name))
-				print_error(name, "shape '" + name.content + "' already exists.");
+			if(is_in(shapes, name, exist))
+				print_error(name, "shape '" + name.content + "' already defined at " + to_string(exist.line) + ":" + to_string(exist.col) + ".");
 			else
 				shapes.push_back(name);
 
 			break;
 
 		case NEW_COLOR:
-			if(is_in(colors, name))
-				print_error(name, "color '" + name.content + "' already exists.");
+			if(is_in(colors, name, exist))
+				print_error(name, "color '" + name.content + "' already defined at " + to_string(exist.line) + ":" + to_string(exist.col) + ".");
 			else
 				colors.push_back(name);
 
 			break;
 
 		case NEW_FILL:
-			if(!is_in(shapes, name))
+			if(!is_in(shapes, name, exist))
 				print_error(name, "shape '" + name.content + "' doesn't exist.");
 			else
 				fills.push_back(name);
@@ -466,13 +467,13 @@ void Parser::parse_name(const unsigned int& parse_name_type) {
 			break;
 
 		case CHECK_SHAPE:
-			if(!is_in(shapes, name))
+			if(!is_in(shapes, name, exist))
 				print_error(name, "shape '" + name.content + "' doesn't exist.");
 
 			break;
 
 		case CHECK_COLOR:
-			if(!is_in(colors, name))
+			if(!is_in(colors, name, exist))
 				print_error(name, "color '" + name.content + "' doesn't exist.");
 
 			break;
@@ -629,16 +630,21 @@ bool Parser::is_in(const vector<char>& v, const char& c) const {
 
 /**
  * This method is used to check if a given token is in a vector of tokens.
+ * If the token already exists in the vector, the existing token is assigned to 'exist'.
  *
  * @param v the vector of tokens
  * @param t the token
+ * @param exist the existing token (if already exists)
  *
  * @return a boolean value indicating if the token 't' is in the vector of tokens 'v'
  */
-bool Parser::is_in(const vector<token>& v, const token& t) const {
+bool Parser::is_in(const vector<token>& v, const token& t, token& exist) const {
 	for(token v_t : v)
-		if(v_t.content == t.content)
+		if(v_t.content == t.content) {
+			exist = v_t;
+
 			return true;
+		}
 
 	return false;
 }
