@@ -5,7 +5,7 @@
  * This file is the implementation of the 'Parser' class.
  *
  * @author Maxime MEURISSE (m.meurisse@student.uliege.be) - 20161278
- * @version 2019.04.22
+ * @version 2019.04.26
  */
 
 #include <fstream>
@@ -54,32 +54,46 @@ void Parser::print_stats() const {
  * @param line the line of the token
  * @param col the col of the token
  * @param content the content of the token
+ * @param file the file to close if an error occured
  *
  * @return a token whose type has been determined according to its content
  */
-token Parser::create_token(const unsigned int line, const unsigned int col, const string content) const {
+token Parser::create_token(const unsigned int line, const unsigned int col, const string content, ifstream& file) const {
 	unsigned int nb_char = 0, nb_digit = 0, nb_point = 0, nb_operator = 0;
 	unsigned int content_length = content.length();
 	token t = {line, col - content_length, 0, content};
 
-	for(char c : content)
-		if(isalpha(c) || c == '_')
-			nb_char++;
-		else if(isdigit(c))
-			nb_digit++;
-		else if(c == '.')
-			nb_point++;
-		else if(c == '+' || c == '-')
-			nb_operator++;
+	if(!content.empty()) {
+		for(char c : content)
+			if(isalpha(c) || c == '_')
+				nb_char++;
+			else if(isdigit(c))
+				nb_digit++;
+			else if(c == '.')
+				nb_point++;
+			else if(c == '+' || c == '-')
+				nb_operator++;
 
-	if(nb_operator == content_length && nb_operator == 1)
-		t.type = OPERATOR;
-	else if(nb_digit + nb_point + nb_operator == content_length && nb_point <= 1 && nb_operator <= 1)
-		t.type = NUMBER;
-	else if(nb_char + nb_digit == content_length && isalpha(content.at(0)))
-		t.type = STRING;
-	else
-		print_error(t, "invalid element ('" + t.content + "').");
+		if(nb_operator == content_length && nb_operator == 1) {
+			t.type = OPERATOR;
+		} else if(nb_digit + nb_point + nb_operator == content_length && nb_point <= 1 && nb_operator <= 1 && nb_digit >= 1) {
+			if(nb_operator == 0) {
+				t.type = NUMBER;
+			} else if(nb_operator == 1 && (content.at(0) == '+' || content.at(0) == '-')) {
+				t.type = NUMBER;
+			} else {
+				file.close();
+
+				print_error(t, "misplaced operator ('" + t.content + "').");
+			}
+		} else if(nb_char + nb_digit == content_length && isalpha(content.at(0))) {
+			t.type = STRING;
+		} else {
+			file.close();
+
+			print_error(t, "invalid element ('" + t.content + "').");
+		}
+	}
 
 	return t;
 }
@@ -129,7 +143,7 @@ void Parser::convert_token() {
 		print_error("Unable to open file.");
 
 	while(getline(file, line_content)) {
-		push_token(create_token(line, col, buffer), buffer);
+		push_token(create_token(line, col, buffer, file), buffer);
 
 		line++;
 		col = 0;
@@ -138,7 +152,7 @@ void Parser::convert_token() {
 			col++;
 
 			if(is_in(SPECIAL_CHARS, c)) {
-				push_token(create_token(line, col, buffer), buffer);
+				push_token(create_token(line, col, buffer, file), buffer);
 
 				if(c == '#') {
 					break;
@@ -157,7 +171,7 @@ void Parser::convert_token() {
 					}
 				}
 			} else if(c == '.') {
-				token t = create_token(line, col, buffer);
+				token t = create_token(line, col, buffer, file);
 
 				if(t.type == STRING) {
 					push_token(t, buffer);
@@ -185,7 +199,7 @@ void Parser::convert_token() {
 					push_token(create_token(line, col, POINT, buffer), buffer);
 
 					buffer = c;
-					push_token(create_token(line, col, buffer), buffer);
+					push_token(create_token(line, col, buffer, file), buffer);
 				} else {
 					buffer += c;
 				}
@@ -195,7 +209,7 @@ void Parser::convert_token() {
 		}
 	}
 
-	push_token(create_token(line, col, buffer), buffer);
+	push_token(create_token(line, col, buffer, file), buffer);
 
 	buffer = "END";
 	push_token(create_token(++line, buffer.length(), END, buffer), buffer);
@@ -575,7 +589,7 @@ void Parser::parse_point() {
 
 			break;
 
-		default: print_error(t, "expected a point definition (got '" + t.content + "').");
+		default: print_error(t, "expected a valid point definition.");
 	}
 }
 

@@ -92,7 +92,7 @@ private:
 	/****************************/
 	/* Token conversion methods */
 	/****************************/
-	token create_token(const unsigned int line, const unsigned int col, const std::string content) const;
+	token create_token(const unsigned int line, const unsigned int col, const std::string content, std::ifstream& file) const;
 	token create_token(const unsigned int line, const unsigned int col, const unsigned int type, const std::string content) const;
 
 	void push_token(const token t, std::string& buffer);
