@@ -4,8 +4,8 @@
  *
  * This file is the implementation of the 'Parser' class.
  *
- * @author Maxime MEURISSE (m.meurisse@student.uliege.be) - 20161278
- * @version 2019.04.26
+ * @author Maxime Meurisse (m.meurisse@student.uliege.be) - 20161278
+ * @version 2019.05.04
  */
 
 #include <fstream>

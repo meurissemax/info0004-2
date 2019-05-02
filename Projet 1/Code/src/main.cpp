@@ -1,9 +1,7 @@
 #include <string>
 #include <vector>
-
 #include <iostream>
 #include <fstream>
-
 #include <chrono>
 
 #include "anagrams.hpp"
@@ -11,7 +9,7 @@
 using namespace std;
 
 int main() {
-    // Variable declaration
+    /// Variable declaration
     Dictionary dict;
 
     string input;
@@ -19,14 +17,14 @@ int main() {
 
     vector<vector<string>> results;
 
-    // Retrieving parameters
+    /// Retrieving parameters
     cout << "Enter a string : ";
     getline(cin, input);
 
     cout << "Enter the maximum number of words (0 for no restriction) : ";
     cin >> max;
 
-    // Dictionary creation
+    /// Dictionary creation
     auto start = chrono::steady_clock::now();
 
     dict = create_dictionary("dictionaries/sowpods.txt");
@@ -35,7 +33,7 @@ int main() {
     auto diff = end - start;
     auto time_dict = chrono::duration <double, milli> (diff).count();
 
-    // Finding anagrams
+    /// Finding anagrams
     start = chrono::steady_clock::now();
 
     results = anagrams(input, dict, max);
@@ -44,20 +42,24 @@ int main() {
     diff = end - start;
     auto time_results = chrono::duration <double, milli> (diff).count();
 
-    // Showing results
+    /// Showing results
     cout << "Number of anagrams : " << results.size() << endl;
     cout << "Time (create_dictionary) : " << time_dict << " ms" << endl;
     cout << "Time (anagrams) : " << time_results << " ms" << endl;
     cout << "Time (total) : " << time_dict + time_results << " ms" << endl;
 
-    // Exporting results
+    /// Exporting results
     ofstream out("outputs/" + string(input) + "-" + to_string(max) + ".txt");
 
-    for(vector<string> x : results) {
-        for(string y : x)
-            out << y << " ";
+    if(!out) {
+        cerr << "Unable to export result" << endl;
+    } else {
+        for(vector<string> x : results) {
+            for(string y : x)
+                out << y << " ";
 
-        out << "\n";
+            out << "\n";
+        }
     }
 
     return 0;

@@ -6,8 +6,8 @@
  * It reads the user's entries and creates the parser.
  * The parser parse the file and displays its statistics if no error has occurred.
  *
- * @author Maxime MEURISSE (m.meurisse@student.uliege.be) - 20161278
- * @version 2019.04.22
+ * @author Maxime Meurisse (m.meurisse@student.uliege.be) - 20161278
+ * @version 2019.05.04
  */
 
 #include <string>
@@ -30,7 +30,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	filename = argv[1];
-	extension = filename.substr(filename.length() - 6, 6);
+	extension = filename.substr(filename.length() - VALID_EXT.size(), VALID_EXT.size());
 
 	/// We check that the extension of the file is valid.
 	if(extension != VALID_EXT) {

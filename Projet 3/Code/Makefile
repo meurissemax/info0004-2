@@ -1,7 +1,7 @@
 CC = g++
 CFLAGS = -std=c++14 -Wall -Wextra -Wmissing-prototypes -Werror -O3
-CFILES = src/painter-check.cpp src/parser.cpp
-OUT = bin/painter-check
+CFILES = src/geometry.cpp src/graphics.cpp src/painter.cpp
+OUT = bin/painter
 
-painter-check : $(CFILES)
+painter : $(CFILES)
 	$(CC) $(CFLAGS) $(CFILES) -o $(OUT)

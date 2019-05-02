@@ -1,7 +1,7 @@
 CC = g++
-CFLAGS = -std=c++11 -Wall -Wextra
+CFLAGS = -std=c++14 -Wall -Wextra -Wmissing-prototypes -Werror -O3
 CFILES = src/anagrams.cpp src/main.cpp
 OUT = bin/main
 
-main : src/anagrams.cpp src/main.cpp
+main : $(CFILES)
 	$(CC) $(CFLAGS) $(CFILES) -o $(OUT)

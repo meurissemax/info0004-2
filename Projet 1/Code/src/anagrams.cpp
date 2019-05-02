@@ -5,8 +5,8 @@
  * This program generates all the unique anagrams of a string based on a
  * dictionary of words.
  *
- * @author Maxime MEURISSE <m.meurisse@student.uliege.be> (20161278)
- * @date 3/17/2019
+ * @author Maxime Meurisse (m.meurisse@student.uliege.be) - 20161278
+ * @version 2019.05.04
  */
 
 #include <iostream>
