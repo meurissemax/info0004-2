@@ -1,8 +1,6 @@
 #include <cmath>
-#include <cstdint>
 #include <cassert>
-#include <limits>
-#include <utility>
+#include <cstdlib>
 
 #include "headers/geometry.hpp"
 
@@ -14,18 +12,36 @@ using namespace std;
 /* POINT */
 /*********/
 
+Point Point::operator+(Point p) const {
+	return Point(x + p.x, y + p.y);
+}
+
+Point Point::operator-(Point p) const {
+	return Point(x - p.x, y - p.y);
+}
+
+Point Point::operator*(double n) const {
+	return Point(x * n, y * n);
+}
+
+Point Point::operator/(double n) const {
+	return Point(x / n, y / n);
+}
+
 void Point::shift(Point p) {
 	x = x + p.x;
 	y = y + p.y;
 }
 
-void Point::rotate(Point p, float angle) {
-	float tmp_x = x;
+void Point::rotate(Point p, double angle) {
+	double tmp_x = x, sin_a, cos_a;
 
-	angle = angle * M_PI / 180.0;
+	angle *= (M_PI / 180.0);
+	sin_a = sin(angle);
+	cos_a = cos(angle);
 
-	x = (x - p.x) * cos(angle) - (y - p.y) * sin(angle) + p.x;
-	y = (tmp_x - p.x) * sin(angle) + (y - p.y) * cos(angle) + p.y;
+	x = (x - p.x) * cos_a - (y - p.y) * sin_a + p.x;
+	y = (tmp_x - p.x) * sin_a + (y - p.y) * cos_a + p.y;
 }
 
 /* Abstract shape */
@@ -34,18 +50,16 @@ void Point::rotate(Point p, float angle) {
 /* SHAPE */
 /*********/
 
+string Shape::get_name() const {
+	return name;
+}
+
 bool Shape::is_fill() const {
 	return fill;
 }
 
-void Shape::set_color(float r, float g, float b) {
-	uint8_t red, green, blue;
-
-	red = uint8_t(round(r * 255));
-	green = uint8_t(round(g * 255));
-	blue = uint8_t(round(b * 255));
-
-	color = Color(red, green, blue);
+void Shape::set_color(Color c) {
+	color = c;
 	fill = true;
 }
 
@@ -56,85 +70,46 @@ Color Shape::get_color() const {
 }
 
 Point Shape::get_named_point(string name) const {
-	auto e = named_points.find(name);
+	bool find = false;
+	Point p;
 
-	assert(e != named_points.end());
+	for(const auto e : named_points) {
+		if(e.first == name) {
+			p = e.second;
+			find = true;
 
-	return e->second;
-}
-
-void Shape::shift(Point p) {
-	for(auto& named_point : named_points)
-		named_point.second.shift(p);
-}
-
-void Shape::rotate(Point p, float angle) {
-	for(auto& named_point : named_points)
-		named_point.second.rotate(p, angle);
-}
-
-bool Shape::is_inside(Point polygon[], int n, Point p) const { 
-	if(n < 3)
-		return false;
-
-	Point extreme(numeric_limits<float>::max(), p.y);
-
-	int count = 0, i = 0;
-
-	do {
-		int next = (i + 1) % n;
-
-		if(do_intersect(polygon[i], polygon[next], p, extreme)) {
-			if(orientation(polygon[i], p, polygon[next]) == 0)
-				return on_segment(polygon[i], p, polygon[next]);
-
-			count++;
+			break;
 		}
+	}
 
-		i = next;
-	} while(i != 0);
+	if(!find) {
+		cerr << "Point " << name << " doesn't exist in shape " << Shape::name << endl;
 
-	return (count % 2 == 1);
+		exit(EXIT_FAILURE);
+	}
+
+	return p;
 }
 
-bool Shape::on_segment(Point p, Point q, Point r) const {
-	if(q.x <= max(p.x, r.x) && q.x >= min(p.x, r.x) && q.y <= max(p.y, r.y) && q.y >= min(p.y, r.y))
-		return true; 
+bool Shape::contains_polygon(vector<Point> vertices, Point p) const {
+	int n = vertices.size(), i, j = n - 1;
+	double v_i_x, v_i_y, v_j_x, v_j_y;
+	bool odd_nodes = false;
 
-	return false; 
-}
+	for(i = 0; i < n; i++) {
+		v_i_x = vertices.at(i).x;
+		v_i_y = vertices.at(i).y;
+		v_j_x = vertices.at(j).x;
+		v_j_y = vertices.at(j).y;
 
-int Shape::orientation(Point p, Point q, Point r) const {
-	float val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);
+		if(((v_i_y < p.y && v_j_y >= p.y) || (v_j_y < p.y && v_i_y >= p.y)) && (v_i_x <= p.x || v_j_x <= p.x))
+			if(v_i_x + (p.y - v_i_y) / (v_j_y - v_i_y) * (v_j_x - v_i_x) < p.x)
+				odd_nodes = !odd_nodes;
 
-	if(val == 0.0)
-		return 0;
+		j = i;
+	}
 
-	return (val > 0.0) ? 1 : 2;
-}
-
-bool Shape::do_intersect(Point p1, Point q1, Point p2, Point q2) const { 
-	int o1 = orientation(p1, q1, p2);
-	int o2 = orientation(p1, q1, q2);
-	int o3 = orientation(p2, q2, p1);
-	int o4 = orientation(p2, q2, q1);
-
-	if(o1 != o2 && o3 != o4)
-		return true; 
-
-	if(o1 == 0 && on_segment(p1, p2, q1))
-		return true; 
-
-	if(o2 == 0 && on_segment(p1, q2, q1))
-		return true; 
-
-	if(o3 == 0 && on_segment(p2, p1, q2))
-		return true; 
-
-	if(o4 == 0 && on_segment(p2, q1, q2))
-		return true; 
-
-	return false;
+	return odd_nodes;
 }
 
 /* Primitive shapes */
@@ -143,27 +118,27 @@ bool Shape::do_intersect(Point p1, Point q1, Point p2, Point q2) const {
 /* CIRC */
 /********/
 
-Circ::Circ(string name, Point c, float radius) {
+Circ::Circ(string name, Point c, double radius) {
 	Circ::name = name;
 	_radius = radius;
 
-	float incr = (sqrt(2) / 2) * radius;
+	double incr = (sqrt(2) / 2) * radius;
 
-	named_points.insert(pair<string, Point>("c", c));
-	named_points.insert(pair<string, Point>("nw", Point(c.x - incr, c.y + incr)));
-	named_points.insert(pair<string, Point>("n", Point(c.x, c.y + radius)));
-	named_points.insert(pair<string, Point>("ne", Point(c.x + incr, c.y + incr)));
-	named_points.insert(pair<string, Point>("e", Point(c.x + radius, c.y)));
-	named_points.insert(pair<string, Point>("se", Point(c.x + incr, c.y - incr)));
-	named_points.insert(pair<string, Point>("s", Point(c.x, c.y - radius)));
-	named_points.insert(pair<string, Point>("sw", Point(c.x - incr, c.y - incr)));
-	named_points.insert(pair<string, Point>("w", Point(c.x - radius, c.y)));
+	named_points.push_back(make_pair("c", c));
+	named_points.push_back(make_pair("nw", Point(c.x - incr, c.y + incr)));
+	named_points.push_back(make_pair("n", Point(c.x, c.y + radius)));
+	named_points.push_back(make_pair("ne", Point(c.x + incr, c.y + incr)));
+	named_points.push_back(make_pair("e", Point(c.x + radius, c.y)));
+	named_points.push_back(make_pair("se", Point(c.x + incr, c.y - incr)));
+	named_points.push_back(make_pair("s", Point(c.x, c.y - radius)));
+	named_points.push_back(make_pair("sw", Point(c.x - incr, c.y - incr)));
+	named_points.push_back(make_pair("w", Point(c.x - radius, c.y)));
 }
 
-bool Circ::is_in(Point p) const {
+bool Circ::contains(Point p) const {
 	Point c = get_named_point("c");
 
-	if(pow(p.x - c.x, 2) + pow(p.y - c.y, 2) <= pow(_radius, 2))
+	if((p.x - c.x) * (p.x - c.x) + (p.y - c.y) * (p.y - c.y) <= (_radius * _radius))
 		return true;
 
 	return false;
@@ -173,43 +148,31 @@ bool Circ::is_in(Point p) const {
 /* ELLI */
 /********/
 
-Elli::Elli(string name, Point c, float a, float b) {
+Elli::Elli(string name, Point c, double a, double b) {
 	Elli::name = name;
 	_a = a;
 	_b = b;
-	_angle = 0;
 
-	float incr = sqrt(2) / 2;
-	float d_f = sqrt(pow(a, 2) - pow(b, 2));
+	double incr = sqrt(2) / 2;
+	double d_f = sqrt((a * a) - (b * b));
 
-	named_points.insert(pair<string, Point>("c", c));
-	named_points.insert(pair<string, Point>("nw", Point(c.x - a * incr, c.y + b * incr)));
-	named_points.insert(pair<string, Point>("n", Point(c.x, c.y + b)));
-	named_points.insert(pair<string, Point>("ne", Point(c.x + a * incr, c.y + b * incr)));
-	named_points.insert(pair<string, Point>("e", Point(c.x + a, c.y)));
-	named_points.insert(pair<string, Point>("se", Point(c.x + a * incr, c.y - b * incr)));
-	named_points.insert(pair<string, Point>("s", Point(c.x, c.y - b)));
-	named_points.insert(pair<string, Point>("sw", Point(c.x - a * incr, c.y - b * incr)));
-	named_points.insert(pair<string, Point>("w", Point(c.x - a, c.y)));
-	named_points.insert(pair<string, Point>("f1", Point(c.x + d_f, c.y)));
-	named_points.insert(pair<string, Point>("f2", Point(c.x - d_f, c.y)));
+	named_points.push_back(make_pair("c", c));
+	named_points.push_back(make_pair("nw", Point(c.x - a * incr, c.y + b * incr)));
+	named_points.push_back(make_pair("n", Point(c.x, c.y + b)));
+	named_points.push_back(make_pair("ne", Point(c.x + a * incr, c.y + b * incr)));
+	named_points.push_back(make_pair("e", Point(c.x + a, c.y)));
+	named_points.push_back(make_pair("se", Point(c.x + a * incr, c.y - b * incr)));
+	named_points.push_back(make_pair("s", Point(c.x, c.y - b)));
+	named_points.push_back(make_pair("sw", Point(c.x - a * incr, c.y - b * incr)));
+	named_points.push_back(make_pair("w", Point(c.x - a, c.y)));
+	named_points.push_back(make_pair("f1", Point(c.x + d_f, c.y)));
+	named_points.push_back(make_pair("f2", Point(c.x - d_f, c.y)));
 }
 
-void Elli::rotate(Point p, float angle) {
-	_angle = angle * M_PI / 180.0;
-
-	Shape::rotate(p, angle);
-}
-
-bool Elli::is_in(Point p) const {
+bool Elli::contains(Point p) const {
 	Point c = get_named_point("c");
 
-	float sin_a = sin(_angle), cos_a = cos(_angle);
-
-	float num_1 = pow((p.x - c.x) * cos_a + (p.y - c.y) * sin_a, 2);
-	float num_2 = pow((p.x - c.x) * sin_a - (p.y - c.y) * cos_a, 2);
-
-	if(num_1 / pow(_a, 2) + num_2 / pow(_b, 2) <= 1.0)
+	if(((p.x - c.x) * (p.x - c.x)) / (_a * _a) + ((c.y - p.y) * (c.y - p.y)) / (_b * _b) <= 1.0)
 		return true;
 
 	return false;
@@ -219,28 +182,28 @@ bool Elli::is_in(Point p) const {
 /* RECT */
 /********/
 
-Rect::Rect(string name, Point c, float width, float height) {
+Rect::Rect(string name, Point c, double width, double height) {
 	Rect::name = name;
 	_width = width;
 	_height = height;
 
-	float mid_width = width / 2, mid_height = height / 2;
+	double mid_width = width / 2, mid_height = height / 2;
 
-	named_points.insert(pair<string, Point>("c", c));
-	named_points.insert(pair<string, Point>("nw", Point(c.x - mid_width, c.y + mid_height)));
-	named_points.insert(pair<string, Point>("n", Point(c.x, c.y + mid_height)));
-	named_points.insert(pair<string, Point>("ne", Point(c.x + mid_width, c.y + mid_height)));
-	named_points.insert(pair<string, Point>("e", Point(c.x + mid_width, c.y)));
-	named_points.insert(pair<string, Point>("se", Point(c.x + mid_width, c.y - mid_height)));
-	named_points.insert(pair<string, Point>("s", Point(c.x, c.y - mid_height)));
-	named_points.insert(pair<string, Point>("sw", Point(c.x - mid_width, c.y - mid_height)));
-	named_points.insert(pair<string, Point>("w", Point(c.x - mid_width, c.y)));
+	named_points.push_back(make_pair("c", c));
+	named_points.push_back(make_pair("nw", Point(c.x - mid_width, c.y + mid_height)));
+	named_points.push_back(make_pair("n", Point(c.x, c.y + mid_height)));
+	named_points.push_back(make_pair("ne", Point(c.x + mid_width, c.y + mid_height)));
+	named_points.push_back(make_pair("e", Point(c.x + mid_width, c.y)));
+	named_points.push_back(make_pair("se", Point(c.x + mid_width, c.y - mid_height)));
+	named_points.push_back(make_pair("s", Point(c.x, c.y - mid_height)));
+	named_points.push_back(make_pair("sw", Point(c.x - mid_width, c.y - mid_height)));
+	named_points.push_back(make_pair("w", Point(c.x - mid_width, c.y)));
 }
 
-bool Rect::is_in(Point p) const {
-	Point polygon[] = {get_named_point("nw"), get_named_point("ne"), get_named_point("se"), get_named_point("sw")};
+bool Rect::contains(Point p) const {
+	vector<Point> vertices {get_named_point("nw"), get_named_point("ne"), get_named_point("se"), get_named_point("sw")};
 
-	return is_inside(polygon, 4, p);
+	return contains_polygon(vertices, p);
 }
 
 /*******/
@@ -250,17 +213,117 @@ bool Rect::is_in(Point p) const {
 Tri::Tri(string name, Point v0, Point v1, Point v2) {
 	Tri::name = name;
 	
-	named_points.insert(pair<string, Point>("c", Point((v0.x + v1.x + v2.x) / 3, (v0.y + v1.y + v2.y) / 3)));
-	named_points.insert(pair<string, Point>("v0", v0));
-	named_points.insert(pair<string, Point>("v1", v1));
-	named_points.insert(pair<string, Point>("v2", v2));
-	named_points.insert(pair<string, Point>("s01", Point((v0.x + v1.x) / 2, (v0.y + v1.y) / 2)));
-	named_points.insert(pair<string, Point>("s02", Point((v0.x + v2.x) / 2, (v0.y + v2.y) / 2)));
-	named_points.insert(pair<string, Point>("s12", Point((v1.x + v2.x) / 2, (v1.y + v2.y) / 2)));
+	named_points.push_back(make_pair("c", Point((v0.x + v1.x + v2.x) / 3, (v0.y + v1.y + v2.y) / 3)));
+	named_points.push_back(make_pair("v0", v0));
+	named_points.push_back(make_pair("v1", v1));
+	named_points.push_back(make_pair("v2", v2));
+	named_points.push_back(make_pair("s01", Point((v0.x + v1.x) / 2, (v0.y + v1.y) / 2)));
+	named_points.push_back(make_pair("s02", Point((v0.x + v2.x) / 2, (v0.y + v2.y) / 2)));
+	named_points.push_back(make_pair("s12", Point((v1.x + v2.x) / 2, (v1.y + v2.y) / 2)));
 }
 
-bool Tri::is_in(Point p) const {
-	Point polygon[] = {get_named_point("v0"), get_named_point("v1"), get_named_point("v2")};
+bool Tri::contains(Point p) const {
+	vector<Point> vertices {get_named_point("v0"), get_named_point("v1"), get_named_point("v2")};
 
-	return is_inside(polygon, 3, p);
+	return contains_polygon(vertices, p);
+}
+
+/* Derived shapes */
+
+/*********/
+/* SHIFT */
+/*********/
+
+Shift::Shift(string name, Point p, shared_ptr<Shape> ref_shape) {
+	Shift::name = name;
+	_p = p;
+	_ref_shape = ref_shape;
+}
+
+Point Shift::get_named_point(string name) const {
+	Point p = _ref_shape->get_named_point(name);
+	p.shift(_p);
+
+	return p;
+}
+
+bool Shift::contains(Point p) const {
+	Point inv(- _p.x, - _p.y);
+	p.shift(inv);
+
+	return _ref_shape->contains(p);
+}
+
+/*******/
+/* ROT */
+/*******/
+
+Rot::Rot(string name, double angle, Point p, shared_ptr<Shape> ref_shape) {
+	Rot::name = name;
+	_angle = angle;
+	_p = p;
+	_ref_shape = ref_shape;
+}
+
+Point Rot::get_named_point(string name) const {
+	Point p = _ref_shape->get_named_point(name);
+	p.rotate(_p, _angle);
+
+	return p;
+}
+
+bool Rot::contains(Point p) const {
+	p.rotate(_p, - _angle);
+
+	return _ref_shape->contains(p);
+}
+
+/*********/
+/* UNION */
+/*********/
+
+Union::Union(string name, vector<shared_ptr<Shape>> shapes) {
+	Union::name = name;
+	_shapes = shapes;
+}
+
+Point Union::get_named_point(string name) const {
+	return _shapes.at(0)->get_named_point(name);
+}
+
+bool Union::contains(Point p) const {
+	for(const auto& shape : _shapes)
+		if(shape->contains(p))
+			return true;
+
+	return false;
+}
+
+/********/
+/* DIFF */
+/********/
+
+Diff::Diff(string name, vector<shared_ptr<Shape>> shapes) {
+	Diff::name = name;
+	_shapes = shapes;
+}
+
+Point Diff::get_named_point(string name) const {
+	return _shapes.at(0)->get_named_point(name);
+}
+
+bool Diff::contains(Point p) const {
+	bool in_first = false, in_other = false;
+
+	if(_shapes.at(0)->contains(p))
+		in_first = true;
+
+	for(auto e = _shapes.cbegin() + 1; e != _shapes.cend(); e++)
+		if((*e)->contains(p))
+			in_other = true;
+
+	if(in_first && !in_other)
+		return true;
+
+	return false;
 }

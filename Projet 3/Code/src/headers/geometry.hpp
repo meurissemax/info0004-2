@@ -2,7 +2,9 @@
 #define GEOMETRY_HPP
 
 #include <string>
-#include <map>
+#include <vector>
+#include <utility>
+#include <memory>
 
 #include "graphics.hpp"
 
@@ -14,12 +16,17 @@
 
 struct Point {
 	Point() : x(0), y(0) { }
-	Point(float _x, float _y) : x(_x), y(_y) { }
+	Point(double _x, double _y) : x(_x), y(_y) { }
+
+	Point operator+(Point p) const;
+	Point operator-(Point p) const;
+	Point operator*(double n) const;
+	Point operator/(double n) const;
 
 	void shift(Point p);
-	void rotate(Point p, float angle);
+	void rotate(Point p, double angle);
 
-	float x, y;
+	double x, y;
 };
 
 /* Abstract shape */
@@ -33,17 +40,15 @@ public:
 	Shape() : fill(false) { }
 	virtual ~Shape() = default;
 
-	bool is_fill() const;
+	std::string get_name() const;
 
-	void set_color(float r, float g, float b);
+	bool is_fill() const;
+	void set_color(Color c);
 	Color get_color() const;
 
-	Point get_named_point(std::string name) const;
+	virtual Point get_named_point(std::string name) const;
 
-	virtual void shift(Point p);
-	virtual void rotate(Point p, float angle);
-
-	virtual bool is_in(Point p) const = 0;
+	virtual bool contains(Point p) const = 0;
 
 protected:
 	std::string name;
@@ -51,14 +56,9 @@ protected:
 	bool fill;
 	Color color;
 
-	std::map<std::string, Point> named_points;
+	std::vector<std::pair<std::string, Point>> named_points;
 
-	bool is_inside(Point polygon[], int n, Point p) const;
-
-private:
-	bool on_segment(Point p, Point q, Point r) const;
-	int orientation(Point p, Point q, Point r) const;
-	bool do_intersect(Point p1, Point q1, Point p2, Point q2) const;
+	bool contains_polygon(std::vector<Point> vertices, Point p) const;
 };
 
 /* Primitive shapes */
@@ -69,12 +69,13 @@ private:
 
 class Circ : public Shape {
 public:
-	Circ(std::string name, Point c, float radius);
-
-	bool is_in(Point p) const override;
+	bool contains(Point p) const override;
 
 private:
-	float _radius;
+	Circ(std::string name, Point c, double radius);
+	friend class Parser;
+
+	double _radius;
 };
 
 /********/
@@ -83,14 +84,13 @@ private:
 
 class Elli : public Shape {
 public:
-	Elli(std::string name, Point c, float a, float b);
-
-	void rotate(Point p, float angle) override;
-	bool is_in(Point p) const override;
+	bool contains(Point p) const override;
 
 private:
-	float _a, _b;
-	float _angle;
+	Elli(std::string name, Point c, double a, double b);
+	friend class Parser;
+
+	double _a, _b;
 };
 
 /********/
@@ -99,12 +99,13 @@ private:
 
 class Rect : public Shape {
 public:
-	Rect(std::string name, Point c, float width, float height);
-
-	bool is_in(Point p) const override;
+	bool contains(Point p) const override;
 
 private:
-	float _width, _height;
+	Rect(std::string name, Point c, double width, double height);
+	friend class Parser;
+
+	double _width, _height;
 };
 
 /*******/
@@ -113,9 +114,11 @@ private:
 
 class Tri : public Shape {
 public:
-	Tri(std::string name, Point v0, Point v1, Point v2);
+	bool contains(Point p) const override;
 
-	bool is_in(Point p) const override;
+private:
+	Tri(std::string name, Point v0, Point v1, Point v2);
+	friend class Parser;
 };
 
 /* Derived shapes */
@@ -124,16 +127,67 @@ public:
 /* SHIFT */
 /*********/
 
+class Shift : public Shape {
+public:
+	Point get_named_point(std::string name) const override;
+	bool contains(Point p) const override;
+
+private:
+	Shift(std::string name, Point p, std::shared_ptr<Shape> ref_shape);
+	friend class Parser;
+
+	Point _p;
+	std::shared_ptr<Shape> _ref_shape;
+};
+
 /*******/
 /* ROT */
 /*******/
+
+class Rot : public Shape {
+public:
+	Point get_named_point(std::string name) const override;
+	bool contains(Point p) const override;
+
+private:
+	Rot(std::string name, double angle, Point p, std::shared_ptr<Shape> ref_shape);
+	friend class Parser;
+
+	double _angle;
+	Point _p;
+	std::shared_ptr<Shape> _ref_shape;
+};
 
 /*********/
 /* UNION */
 /*********/
 
+class Union : public Shape {
+public:
+	Point get_named_point(std::string name) const override;
+	bool contains(Point p) const override;
+
+private:
+	Union(std::string name, std::vector<std::shared_ptr<Shape>> shapes);
+	friend class Parser;
+
+	std::vector<std::shared_ptr<Shape>> _shapes;
+};
+
 /********/
 /* DIFF */
 /********/
+
+class Diff : public Shape {
+public:
+	Point get_named_point(std::string name) const override;
+	bool contains(Point p) const override;
+
+private:
+	Diff(std::string name, std::vector<std::shared_ptr<Shape>> shapes);
+	friend class Parser;
+
+	std::vector<std::shared_ptr<Shape>> _shapes;
+};
 
 #endif
