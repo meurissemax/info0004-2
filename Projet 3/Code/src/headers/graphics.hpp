@@ -26,15 +26,15 @@ public:
     Image() : _width(0), _height(0) { }
     Image(size_t width, size_t height);
 
-    size_t width() const;
-    size_t height() const;
+    size_t width() const { return _width; }
+    size_t height() const { return _height; }
 
     Color operator()(size_t x, size_t y) const;
     Color& operator()(size_t x, size_t y);
 
 private:
     size_t _width, _height;
-
+    
     std::unique_ptr<Color[]> _pixels;
 };
 

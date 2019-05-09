@@ -1,10 +1,10 @@
 #include <string>
-#include <cstdlib>
+#include <cstring>
 #include <vector>
 #include <memory>
 #include <iostream>
-#include <chrono>
 #include <fstream>
+#include <chrono>
 
 #include "headers/geometry.hpp"
 #include "headers/graphics.hpp"
@@ -14,9 +14,10 @@ using namespace std;
 
 int main(int argc, char* argv[]) {
 	const string VALID_EXT = ".paint";
+	const string SEP = "------------";
 
-	size_t i = 0, width, height;
-	string input, filename, extension, outfilename;
+	size_t width, height;
+	string input, filename, extension;
 	vector<shared_ptr<Shape>> shapes;
 
 	if(argc < 2 || argc > 2) {
@@ -39,29 +40,23 @@ int main(int argc, char* argv[]) {
 
 	Parser parser(input);
 
-	cout << "Parsing file...";
+	cout << SEP << endl;
+	cout << "Parsing file..." << flush;
 
 	parser.parse_file();
 
 	cout << " DONE" << endl;
+	cout << SEP << endl;
 
 	parser.print_stats();
+
+	cout << SEP << endl;
 
 	width = parser.get_width();
 	height = parser.get_height();
 	shapes = parser.get_shapes();
 
-	for(i = filename.length() - 1; i >= 0; i--) {
-		if(filename.at(i) == '/') {
-			i++;
-
-			break;
-		}
-	}
-
-	outfilename = filename.substr(i, filename.length());
-
-	ofstream outfile("outputs/" + outfilename + ".ppm");
+	ofstream outfile(filename + ".ppm", ios::binary);
 
 	if(!outfile) {
 		cerr << "Unable to create output file" << endl;
@@ -69,14 +64,16 @@ int main(int argc, char* argv[]) {
 		return 1;
 	}
 
-	cout << "Creating PPM file...";
+	cout << "Creating PPM file..." << flush;
 
 	Image img(width, height);
 
 	for(size_t i = 0; i < width; i++) {
 		for(size_t j = 0; j < height; j++) {
+			Point pixel(i + 0.5, j + 0.5);
+
 			for(auto e = shapes.rbegin(); e != shapes.rend(); e++) {
-				if((*e)->is_fill() && (*e)->contains(Point(i + 0.5, j + 0.5))) {
+				if((*e)->is_fill() && (*e)->contains(pixel)) {
 					img(i, j) = (*e)->get_color();
 
 					break;
@@ -88,13 +85,12 @@ int main(int argc, char* argv[]) {
 	outfile << img;
 	outfile.close();
 
-	cout << " DONE" << endl;
-
 	auto end = chrono::steady_clock::now();
     auto diff = end - start;
     auto time = chrono::duration <double, milli> (diff).count();
 
-	cout << "Elapsed time is " << time << " ms" << endl;
+	cout << " DONE in " << time << " ms" << endl;
+	cout << SEP << endl;
 
 	return 0;
 }

@@ -276,6 +276,9 @@ void Parser::parse_elli() {
 	if(!(a > 0.0 && b > 0.0))
 		print_error("radii of ellipse must be positive.");
 
+	if(a < b)
+		print_error("semi-major radius must be greater than semi-minor radius.");
+
 	_shapes.push_back(make_shared<Elli>(Elli(name, center, a, b)));
 
 	parse_instr();
@@ -478,6 +481,9 @@ void Parser::parse_fill() {
 
 	_shapes.at(i)->set_color(c);
 
+	auto it = _shapes.begin() + i;
+	rotate(it, it + 1, _shapes.end());
+
 	parse_instr();
 }
 
@@ -599,7 +605,11 @@ Point Parser::parse_point() {
 				if(_shapes.at(i)->get_name() == name)
 					break;
 
-			p = _shapes.at(i)->get_named_point(t.content);
+			try {
+				p = _shapes.at(i)->get_named_point(t.content);
+			} catch(const invalid_argument& e) {
+				print_error(t, "point " + t.content + "doesn't exist.");
+			}
 
 			break;
 

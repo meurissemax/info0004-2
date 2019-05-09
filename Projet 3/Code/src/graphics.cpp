@@ -2,27 +2,15 @@
 
 #include "headers/graphics.hpp"
 
-using namespace std;
-
 /*********/
 /* IMAGE */
 /*********/
-
-/* Public members */
 
 Image::Image(size_t width, size_t height) {
 	_width = width;
 	_height = height;
 
 	_pixels = std::make_unique<Color[]>(width * height);
-}
-
-size_t Image::width() const {
-	return _width;
-}
-
-size_t Image::height() const {
-	return _height;
 }
 
 Color Image::operator()(size_t x, size_t y) const {
@@ -43,11 +31,11 @@ Color& Image::operator()(size_t x, size_t y) {
 /* OTHER */
 /*********/
 
-ostream& operator<<(ostream& out, const Color& c) {
+std::ostream& operator<<(std::ostream& out, const Color& c) {
 	return out << c.red << c.green << c.blue;
 }
 
-ostream& operator<<(ostream& out, const Image& img) {
+std::ostream& operator<<(std::ostream& out, const Image& img) {
 	size_t width = img.width(), height = img.height();
 
 	assert(width > 0);

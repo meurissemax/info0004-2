@@ -3,7 +3,6 @@
 
 #include <string>
 #include <vector>
-#include <utility>
 #include <memory>
 
 #include "graphics.hpp"
@@ -18,10 +17,10 @@ struct Point {
 	Point() : x(0), y(0) { }
 	Point(double _x, double _y) : x(_x), y(_y) { }
 
-	Point operator+(Point p) const;
-	Point operator-(Point p) const;
-	Point operator*(double n) const;
-	Point operator/(double n) const;
+	Point operator+(Point p) const { return Point(x + p.x, y + p.y); }
+	Point operator-(Point p) const { return Point(x - p.x, y - p.y); }
+	Point operator*(double n) const { return Point(x * n, y * n); }
+	Point operator/(double n) const { return Point(x / n, y / n); }
 
 	void shift(Point p);
 	void rotate(Point p, double angle);
@@ -40,14 +39,13 @@ public:
 	Shape() : fill(false) { }
 	virtual ~Shape() = default;
 
-	std::string get_name() const;
+	std::string get_name() const { return name; }
 
-	bool is_fill() const;
+	bool is_fill() const { return fill; }
 	void set_color(Color c);
 	Color get_color() const;
 
-	virtual Point get_named_point(std::string name) const;
-
+	virtual Point get_named_point(std::string name) const = 0;
 	virtual bool contains(Point p) const = 0;
 
 protected:
@@ -55,10 +53,6 @@ protected:
 
 	bool fill;
 	Color color;
-
-	std::vector<std::pair<std::string, Point>> named_points;
-
-	bool contains_polygon(std::vector<Point> vertices, Point p) const;
 };
 
 /* Primitive shapes */
@@ -69,12 +63,14 @@ protected:
 
 class Circ : public Shape {
 public:
+	Point get_named_point(std::string name) const override;
 	bool contains(Point p) const override;
 
 private:
 	Circ(std::string name, Point c, double radius);
 	friend class Parser;
 
+	Point _c;
 	double _radius;
 };
 
@@ -84,12 +80,14 @@ private:
 
 class Elli : public Shape {
 public:
+	Point get_named_point(std::string name) const override;
 	bool contains(Point p) const override;
 
 private:
 	Elli(std::string name, Point c, double a, double b);
 	friend class Parser;
 
+	Point _c;
 	double _a, _b;
 };
 
@@ -99,12 +97,14 @@ private:
 
 class Rect : public Shape {
 public:
+	Point get_named_point(std::string name) const override;
 	bool contains(Point p) const override;
 
 private:
 	Rect(std::string name, Point c, double width, double height);
 	friend class Parser;
 
+	Point _c;
 	double _width, _height;
 };
 
@@ -114,11 +114,14 @@ private:
 
 class Tri : public Shape {
 public:
+	Point get_named_point(std::string name) const override;
 	bool contains(Point p) const override;
 
 private:
 	Tri(std::string name, Point v0, Point v1, Point v2);
 	friend class Parser;
+
+	Point _v0, _v1, _v2;
 };
 
 /* Derived shapes */

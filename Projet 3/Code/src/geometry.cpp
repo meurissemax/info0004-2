@@ -1,10 +1,7 @@
 #include <cmath>
 #include <cassert>
-#include <cstdlib>
 
 #include "headers/geometry.hpp"
-
-using namespace std;
 
 /* Basic structure */
 
@@ -12,25 +9,9 @@ using namespace std;
 /* POINT */
 /*********/
 
-Point Point::operator+(Point p) const {
-	return Point(x + p.x, y + p.y);
-}
-
-Point Point::operator-(Point p) const {
-	return Point(x - p.x, y - p.y);
-}
-
-Point Point::operator*(double n) const {
-	return Point(x * n, y * n);
-}
-
-Point Point::operator/(double n) const {
-	return Point(x / n, y / n);
-}
-
 void Point::shift(Point p) {
-	x = x + p.x;
-	y = y + p.y;
+	x += p.x;
+	y += p.y;
 }
 
 void Point::rotate(Point p, double angle) {
@@ -50,14 +31,6 @@ void Point::rotate(Point p, double angle) {
 /* SHAPE */
 /*********/
 
-string Shape::get_name() const {
-	return name;
-}
-
-bool Shape::is_fill() const {
-	return fill;
-}
-
 void Shape::set_color(Color c) {
 	color = c;
 	fill = true;
@@ -69,76 +42,45 @@ Color Shape::get_color() const {
 	return color;
 }
 
-Point Shape::get_named_point(string name) const {
-	bool find = false;
-	Point p;
-
-	for(const auto e : named_points) {
-		if(e.first == name) {
-			p = e.second;
-			find = true;
-
-			break;
-		}
-	}
-
-	if(!find) {
-		cerr << "Point " << name << " doesn't exist in shape " << Shape::name << endl;
-
-		exit(EXIT_FAILURE);
-	}
-
-	return p;
-}
-
-bool Shape::contains_polygon(vector<Point> vertices, Point p) const {
-	int n = vertices.size(), i, j = n - 1;
-	double v_i_x, v_i_y, v_j_x, v_j_y;
-	bool odd_nodes = false;
-
-	for(i = 0; i < n; i++) {
-		v_i_x = vertices.at(i).x;
-		v_i_y = vertices.at(i).y;
-		v_j_x = vertices.at(j).x;
-		v_j_y = vertices.at(j).y;
-
-		if(((v_i_y < p.y && v_j_y >= p.y) || (v_j_y < p.y && v_i_y >= p.y)) && (v_i_x <= p.x || v_j_x <= p.x))
-			if(v_i_x + (p.y - v_i_y) / (v_j_y - v_i_y) * (v_j_x - v_i_x) < p.x)
-				odd_nodes = !odd_nodes;
-
-		j = i;
-	}
-
-	return odd_nodes;
-}
-
 /* Primitive shapes */
 
 /********/
 /* CIRC */
 /********/
 
-Circ::Circ(string name, Point c, double radius) {
+Circ::Circ(std::string name, Point c, double radius) {
 	Circ::name = name;
+	_c = c;
 	_radius = radius;
+}
 
-	double incr = (sqrt(2) / 2) * radius;
+Point Circ::get_named_point(std::string name) const {
+	double incr = (M_SQRT2 / 2) * _radius;
 
-	named_points.push_back(make_pair("c", c));
-	named_points.push_back(make_pair("nw", Point(c.x - incr, c.y + incr)));
-	named_points.push_back(make_pair("n", Point(c.x, c.y + radius)));
-	named_points.push_back(make_pair("ne", Point(c.x + incr, c.y + incr)));
-	named_points.push_back(make_pair("e", Point(c.x + radius, c.y)));
-	named_points.push_back(make_pair("se", Point(c.x + incr, c.y - incr)));
-	named_points.push_back(make_pair("s", Point(c.x, c.y - radius)));
-	named_points.push_back(make_pair("sw", Point(c.x - incr, c.y - incr)));
-	named_points.push_back(make_pair("w", Point(c.x - radius, c.y)));
+	if(name == "c")
+		return _c;
+	else if(name == "nw")
+		return Point(_c.x - incr, _c.y + incr);
+	else if(name == "n")
+		return Point(_c.x, _c.y + _radius);
+	else if(name == "ne")
+		return Point(_c.x + incr, _c.y + incr);
+	else if(name == "e")
+		return Point(_c.x + _radius, _c.y);
+	else if(name == "se")
+		return Point(_c.x + incr, _c.y - incr);
+	else if(name == "s")
+		return Point(_c.x, _c.y - _radius);
+	else if(name == "sw")
+		return Point(_c.x - incr, _c.y - incr);
+	else if(name == "w")
+		return Point(_c.x - _radius, _c.y);
+	else
+		throw std::invalid_argument("Point doesn't exist.");
 }
 
 bool Circ::contains(Point p) const {
-	Point c = get_named_point("c");
-
-	if((p.x - c.x) * (p.x - c.x) + (p.y - c.y) * (p.y - c.y) <= (_radius * _radius))
+	if(pow(p.x - _c.x, 2) + pow(p.y - _c.y, 2) <= pow(_radius, 2))
 		return true;
 
 	return false;
@@ -148,31 +90,44 @@ bool Circ::contains(Point p) const {
 /* ELLI */
 /********/
 
-Elli::Elli(string name, Point c, double a, double b) {
+Elli::Elli(std::string name, Point c, double a, double b) {
 	Elli::name = name;
+	_c = c;
 	_a = a;
 	_b = b;
+}
 
-	double incr = sqrt(2) / 2;
-	double d_f = sqrt((a * a) - (b * b));
+Point Elli::get_named_point(std::string name) const {
+	double incr = M_SQRT2 / 2, d_f = sqrt(pow(_a, 2) - pow(_b, 2));
 
-	named_points.push_back(make_pair("c", c));
-	named_points.push_back(make_pair("nw", Point(c.x - a * incr, c.y + b * incr)));
-	named_points.push_back(make_pair("n", Point(c.x, c.y + b)));
-	named_points.push_back(make_pair("ne", Point(c.x + a * incr, c.y + b * incr)));
-	named_points.push_back(make_pair("e", Point(c.x + a, c.y)));
-	named_points.push_back(make_pair("se", Point(c.x + a * incr, c.y - b * incr)));
-	named_points.push_back(make_pair("s", Point(c.x, c.y - b)));
-	named_points.push_back(make_pair("sw", Point(c.x - a * incr, c.y - b * incr)));
-	named_points.push_back(make_pair("w", Point(c.x - a, c.y)));
-	named_points.push_back(make_pair("f1", Point(c.x + d_f, c.y)));
-	named_points.push_back(make_pair("f2", Point(c.x - d_f, c.y)));
+	if(name == "c")
+		return _c;
+	else if(name == "nw")
+		return Point(_c.x - _a * incr, _c.y + _b * incr);
+	else if(name == "n")
+		return Point(_c.x, _c.y + _b);
+	else if(name == "ne")
+		return Point(_c.x + _a * incr, _c.y + _b * incr);
+	else if(name == "e")
+		return Point(_c.x + _a, _c.y);
+	else if(name == "se")
+		return Point(_c.x + _a * incr, _c.y - _b * incr);
+	else if(name == "s")
+		return Point(_c.x, _c.y - _b);
+	else if(name == "sw")
+		return Point(_c.x - _a * incr, _c.y - _b * incr);
+	else if(name == "w")
+		return Point(_c.x - _a, _c.y);
+	else if(name == "f1")
+		return Point(_c.x + d_f, _c.y);
+	else if(name == "f2")
+		return Point(_c.x - d_f, _c.y);
+	else
+		throw std::invalid_argument("Point doesn't exist.");
 }
 
 bool Elli::contains(Point p) const {
-	Point c = get_named_point("c");
-
-	if(((p.x - c.x) * (p.x - c.x)) / (_a * _a) + ((c.y - p.y) * (c.y - p.y)) / (_b * _b) <= 1.0)
+	if(pow(p.x - _c.x, 2) / pow(_a, 2) + pow(_c.y - p.y, 2) / pow(_b, 2) <= 1.0)
 		return true;
 
 	return false;
@@ -182,50 +137,102 @@ bool Elli::contains(Point p) const {
 /* RECT */
 /********/
 
-Rect::Rect(string name, Point c, double width, double height) {
+Rect::Rect(std::string name, Point c, double width, double height) {
 	Rect::name = name;
+	_c = c;
 	_width = width;
 	_height = height;
+}
 
-	double mid_width = width / 2, mid_height = height / 2;
+Point Rect::get_named_point(std::string name) const {
+	double mid_width = _width / 2, mid_height = _height / 2;
 
-	named_points.push_back(make_pair("c", c));
-	named_points.push_back(make_pair("nw", Point(c.x - mid_width, c.y + mid_height)));
-	named_points.push_back(make_pair("n", Point(c.x, c.y + mid_height)));
-	named_points.push_back(make_pair("ne", Point(c.x + mid_width, c.y + mid_height)));
-	named_points.push_back(make_pair("e", Point(c.x + mid_width, c.y)));
-	named_points.push_back(make_pair("se", Point(c.x + mid_width, c.y - mid_height)));
-	named_points.push_back(make_pair("s", Point(c.x, c.y - mid_height)));
-	named_points.push_back(make_pair("sw", Point(c.x - mid_width, c.y - mid_height)));
-	named_points.push_back(make_pair("w", Point(c.x - mid_width, c.y)));
+	if(name == "c")
+		return _c;
+	else if(name == "nw")
+		return Point(_c.x - mid_width, _c.y + mid_height);
+	else if(name == "n")
+		return Point(_c.x, _c.y + mid_height);
+	else if(name == "ne")
+		return Point(_c.x + mid_width, _c.y + mid_height);
+	else if(name == "e")
+		return Point(_c.x + mid_width, _c.y);
+	else if(name == "se")
+		return Point(_c.x + mid_width, _c.y - mid_height);
+	else if(name == "s")
+		return Point(_c.x, _c.y - mid_height);
+	else if(name == "sw")
+		return Point(_c.x - mid_width, _c.y - mid_height);
+	else if(name == "w")
+		return Point(_c.x - mid_width, _c.y);
+	else
+		throw std::invalid_argument("Point doesn't exist.");
 }
 
 bool Rect::contains(Point p) const {
-	vector<Point> vertices {get_named_point("nw"), get_named_point("ne"), get_named_point("se"), get_named_point("sw")};
+	double mid_width = _width / 2, mid_height = _height / 2;
 
-	return contains_polygon(vertices, p);
+	if(p.x >= _c.x - mid_width && p.x <= _c.x + mid_width && p.y >= _c.y - mid_height && p.y <= _c.y + mid_height)
+		return true;
+
+	return false;
 }
 
 /*******/
 /* TRI */
 /*******/
 
-Tri::Tri(string name, Point v0, Point v1, Point v2) {
+Tri::Tri(std::string name, Point v0, Point v1, Point v2) {
 	Tri::name = name;
-	
-	named_points.push_back(make_pair("c", Point((v0.x + v1.x + v2.x) / 3, (v0.y + v1.y + v2.y) / 3)));
-	named_points.push_back(make_pair("v0", v0));
-	named_points.push_back(make_pair("v1", v1));
-	named_points.push_back(make_pair("v2", v2));
-	named_points.push_back(make_pair("s01", Point((v0.x + v1.x) / 2, (v0.y + v1.y) / 2)));
-	named_points.push_back(make_pair("s02", Point((v0.x + v2.x) / 2, (v0.y + v2.y) / 2)));
-	named_points.push_back(make_pair("s12", Point((v1.x + v2.x) / 2, (v1.y + v2.y) / 2)));
+	_v0 = v0;
+	_v1 = v1;
+	_v2 = v2;
+}
+
+Point Tri::get_named_point(std::string name) const {
+	if(name == "c")
+		return Point((_v0.x + _v1.x + _v2.x) / 3, (_v0.y + _v1.y + _v2.y) / 3);
+	else if(name == "v0")
+		return _v0;
+	else if(name == "v1")
+		return _v1;
+	else if(name == "v2")
+		return _v2;
+	else if(name == "s01")
+		return Point((_v0.x + _v1.x) / 2, (_v0.y + _v1.y) / 2);
+	else if(name == "s02")
+		return Point((_v0.x + _v2.x) / 2, (_v0.y + _v2.y) / 2);
+	else if(name == "s12")
+		return Point((_v1.x + _v2.x) / 2, (_v1.y + _v2.y) / 2);
+	else
+		throw std::invalid_argument("Point doesn't exist.");
 }
 
 bool Tri::contains(Point p) const {
-	vector<Point> vertices {get_named_point("v0"), get_named_point("v1"), get_named_point("v2")};
+	double eps = 0.00001;
 
-	return contains_polygon(vertices, p);
+	double by_cy = _v1.y - _v2.y;
+	double cx_bx = _v2.x - _v1.x;
+	double bxcy_cxby = _v1.x * _v2.y - _v2.x * _v1.y;
+	double cy_ay = _v2.y - _v0.y;
+	double ax_cx = _v0.x - _v2.x;
+	double cxay_axcy = _v2.x * _v0.y - _v0.x * _v2.y;
+	double ay_by = _v0.y - _v1.y;
+	double bx_ax = _v1.x - _v0.x;
+	double axby_bxay = _v0.x * _v1.y - _v1.x * _v0.y;
+
+	double d = (_v0.x * by_cy + _v1.x * cy_ay + _v2.x * ay_by);
+
+	if(fabs(d) < eps)
+		return false;
+
+	d = 1 / d;
+
+	double a1 = (p.x * by_cy + p.y * cx_bx + bxcy_cxby) * d;
+	double a2 = (p.x * cy_ay + p.y * ax_cx + cxay_axcy) * d;
+	double a3 = (p.x * ay_by + p.y * bx_ax + axby_bxay) * d;
+
+	return a1 >= 0 && a2 >= 0 && a3 >= 0 && a1 + a2 + a3 <= 1 + eps;
 }
 
 /* Derived shapes */
@@ -234,13 +241,13 @@ bool Tri::contains(Point p) const {
 /* SHIFT */
 /*********/
 
-Shift::Shift(string name, Point p, shared_ptr<Shape> ref_shape) {
+Shift::Shift(std::string name, Point p, std::shared_ptr<Shape> ref_shape) {
 	Shift::name = name;
 	_p = p;
 	_ref_shape = ref_shape;
 }
 
-Point Shift::get_named_point(string name) const {
+Point Shift::get_named_point(std::string name) const {
 	Point p = _ref_shape->get_named_point(name);
 	p.shift(_p);
 
@@ -258,14 +265,14 @@ bool Shift::contains(Point p) const {
 /* ROT */
 /*******/
 
-Rot::Rot(string name, double angle, Point p, shared_ptr<Shape> ref_shape) {
+Rot::Rot(std::string name, double angle, Point p, std::shared_ptr<Shape> ref_shape) {
 	Rot::name = name;
 	_angle = angle;
 	_p = p;
 	_ref_shape = ref_shape;
 }
 
-Point Rot::get_named_point(string name) const {
+Point Rot::get_named_point(std::string name) const {
 	Point p = _ref_shape->get_named_point(name);
 	p.rotate(_p, _angle);
 
@@ -282,12 +289,12 @@ bool Rot::contains(Point p) const {
 /* UNION */
 /*********/
 
-Union::Union(string name, vector<shared_ptr<Shape>> shapes) {
+Union::Union(std::string name, std::vector<std::shared_ptr<Shape>> shapes) {
 	Union::name = name;
 	_shapes = shapes;
 }
 
-Point Union::get_named_point(string name) const {
+Point Union::get_named_point(std::string name) const {
 	return _shapes.at(0)->get_named_point(name);
 }
 
@@ -303,12 +310,12 @@ bool Union::contains(Point p) const {
 /* DIFF */
 /********/
 
-Diff::Diff(string name, vector<shared_ptr<Shape>> shapes) {
+Diff::Diff(std::string name, std::vector<std::shared_ptr<Shape>> shapes) {
 	Diff::name = name;
 	_shapes = shapes;
 }
 
-Point Diff::get_named_point(string name) const {
+Point Diff::get_named_point(std::string name) const {
 	return _shapes.at(0)->get_named_point(name);
 }
 
