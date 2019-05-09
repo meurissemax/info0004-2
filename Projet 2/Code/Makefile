@@ -1,5 +1,5 @@
 CC = g++
-CFLAGS = -std=c++14 -Wall -Wextra -Wmissing-prototypes -Werror -O3
+CFLAGS = -std=c++14 -Wall -Wextra -Werror -O3
 CFILES = src/painter-check.cpp src/parser.cpp
 OUT = bin/painter-check
 
