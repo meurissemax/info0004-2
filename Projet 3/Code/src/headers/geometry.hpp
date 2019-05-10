@@ -58,23 +58,6 @@ protected:
 /* Primitive shapes */
 
 /********/
-/* CIRC */
-/********/
-
-class Circ : public Shape {
-public:
-	Point get_named_point(std::string name) const override;
-	bool contains(Point p) const override;
-
-private:
-	Circ(std::string name, Point c, double radius);
-	friend class Parser;
-
-	Point _c;
-	double _radius;
-};
-
-/********/
 /* ELLI */
 /********/
 
@@ -105,7 +88,7 @@ private:
 	friend class Parser;
 
 	Point _c;
-	double _width, _height;
+	double _width, _height, _mid_width, _mid_height;
 };
 
 /*******/
@@ -139,7 +122,7 @@ private:
 	Shift(std::string name, Point p, std::shared_ptr<Shape> ref_shape);
 	friend class Parser;
 
-	Point _p;
+	Point _p, _p_inv;
 	std::shared_ptr<Shape> _ref_shape;
 };
 
@@ -187,10 +170,10 @@ public:
 	bool contains(Point p) const override;
 
 private:
-	Diff(std::string name, std::vector<std::shared_ptr<Shape>> shapes);
+	Diff(std::string name, std::shared_ptr<Shape> shape_from, std::shared_ptr<Shape> shape_to);
 	friend class Parser;
 
-	std::vector<std::shared_ptr<Shape>> _shapes;
+	std::shared_ptr<Shape> _shape_from, _shape_to;
 };
 
 #endif

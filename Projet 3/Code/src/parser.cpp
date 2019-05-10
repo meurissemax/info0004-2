@@ -2,6 +2,7 @@
 #include <iostream>
 #include <cstdint>
 #include <cmath>
+#include <algorithm>
 
 #include "headers/parser.hpp"
 
@@ -250,7 +251,7 @@ void Parser::parse_size() {
 	_width = parse_number();
 	_height = parse_number();
 
-	if(!(_width >= 0.0 & _height >= 0.0 & modf(_width, &intpart) == 0.0 && modf(_height, &intpart) == 0.0))
+	if(!(_width >= 0.0 && _height >= 0.0 && modf(_width, &intpart) == 0.0 && modf(_height, &intpart) == 0.0))
 		print_error("dimensions of the image must be positive integers.");
 }
 
@@ -262,7 +263,7 @@ void Parser::parse_circ() {
 	if(!(radius > 0.0))
 		print_error("radius of circle must be positive.");
 
-	_shapes.push_back(make_shared<Circ>(Circ(name, center, radius)));
+	_shapes.push_back(make_shared<Elli>(Elli(name, center, radius, radius)));
 
 	parse_instr();
 }
@@ -384,11 +385,11 @@ void Parser::parse_union() {
 }
 
 void Parser::parse_diff() {
-	vector<shared_ptr<Shape>> diff_shapes;
-
 	string name = parse_name(NEW_SHAPE);
 	string base = parse_name(CHECK_SHAPE);
 	string sub = parse_name(CHECK_SHAPE);
+
+	shared_ptr<Shape> shape_from;
 
 	size_t i;
 
@@ -396,15 +397,13 @@ void Parser::parse_diff() {
 		if(_shapes.at(i)->get_name() == base)
 			break;
 
-	diff_shapes.push_back(_shapes.at(i));
+	shape_from = _shapes.at(i);
 
 	for(i = 0; i < _shapes.size(); i++)
 		if(_shapes.at(i)->get_name() == sub)
 			break;
 
-	diff_shapes.push_back(_shapes.at(i));
-
-	_shapes.push_back(make_shared<Diff>(Diff(name, diff_shapes)));
+	_shapes.push_back(make_shared<Diff>(Diff(name, shape_from, _shapes.at(i))));
 
 	parse_instr();
 }

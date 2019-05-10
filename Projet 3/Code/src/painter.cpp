@@ -27,6 +27,13 @@ int main(int argc, char* argv[]) {
 	}
 
 	input = argv[1];
+
+	if(input.length() <= VALID_EXT.length()) {
+		cerr << "Invalid input file name." << endl;
+
+		return 1;
+	}
+
 	filename = input.substr(0, input.length() - VALID_EXT.size());
 	extension = input.substr(input.length() - VALID_EXT.size(), VALID_EXT.size());
 
@@ -36,16 +43,19 @@ int main(int argc, char* argv[]) {
 		return 1;
 	}
 
-	auto start = chrono::steady_clock::now();
-
 	Parser parser(input);
 
-	cout << SEP << endl;
-	cout << "Parsing file..." << flush;
+	cout << "Parsing file... " << flush;
+
+	auto start = chrono::steady_clock::now();
 
 	parser.parse_file();
 
-	cout << " DONE" << endl;
+	auto end = chrono::steady_clock::now();
+    auto diff = end - start;
+    auto time_parser = chrono::duration <double, milli> (diff).count();
+
+	cout << "DONE in " << time_parser << " ms" << endl;
 	cout << SEP << endl;
 
 	parser.print_stats();
@@ -64,7 +74,9 @@ int main(int argc, char* argv[]) {
 		return 1;
 	}
 
-	cout << "Creating PPM file..." << flush;
+	cout << "Creating PPM file... " << flush;
+
+	start = chrono::steady_clock::now();
 
 	Image img(width, height);
 
@@ -83,14 +95,13 @@ int main(int argc, char* argv[]) {
 	}
 
 	outfile << img;
-	outfile.close();
+	outfile.close(); 
 
-	auto end = chrono::steady_clock::now();
-    auto diff = end - start;
-    auto time = chrono::duration <double, milli> (diff).count();
+	end = chrono::steady_clock::now();
+    diff = end - start;
+    auto time_painter = chrono::duration <double, milli> (diff).count();
 
-	cout << " DONE in " << time << " ms" << endl;
-	cout << SEP << endl;
-
+	cout << "DONE in " << time_painter << " ms" << endl;
+	
 	return 0;
 }
