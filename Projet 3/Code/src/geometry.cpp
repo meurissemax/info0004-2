@@ -1,6 +1,3 @@
-#include <cmath>
-#include <cassert>
-
 #include "headers/geometry.hpp"
 
 using namespace std;
@@ -11,12 +8,11 @@ using namespace std;
 /* POINT */
 /*********/
 
-void Point::shift(Point p) {
-	x += p.x;
-	y += p.y;
+Point Point::shift(Point p) const {
+	return Point(x + p.x, y + p.y);
 }
 
-void Point::rotate(Point p, double angle) {
+Point Point::rotate(Point p, double angle) const {
 	double d_x = x - p.x, d_y = y - p.y;
 	double sin_a, cos_a;
 
@@ -24,8 +20,7 @@ void Point::rotate(Point p, double angle) {
 	sin_a = sin(angle);
 	cos_a = cos(angle);
 
-	x = d_x * cos_a - d_y * sin_a + p.x;
-	y = d_x * sin_a + d_y * cos_a + p.y;
+	return Point(d_x * cos_a - d_y * sin_a + p.x, d_x * sin_a + d_y * cos_a + p.y);
 }
 
 /* Abstract shape */
@@ -34,15 +29,24 @@ void Point::rotate(Point p, double angle) {
 /* SHAPE */
 /*********/
 
-void Shape::set_color(Color c) {
-	color = c;
-	fill = true;
-}
+domain Shape::get_domain(vector<Point> vertices) const {
+	Point lb = vertices.at(0), ur = vertices.at(0);
 
-Color Shape::get_color() const {
-	assert(fill);
+	for(auto e = vertices.cbegin() + 1; e != vertices.cend(); e++) {
+		if((*e).x < lb.x)
+			lb.x = (*e).x;
 
-	return color;
+		if((*e).x > ur.x)
+			ur.x = (*e).x;
+
+		if((*e).y < lb.y)
+			lb.y = (*e).y;
+
+		if((*e).y > ur.y)
+			ur.y = (*e).y;
+	}
+
+	return {lb, ur};
 }
 
 /* Primitive shapes */
@@ -51,125 +55,127 @@ Color Shape::get_color() const {
 /* ELLI */
 /********/
 
-Elli::Elli(string name, Point c, double a, double b) {
-	Elli::name = name;
-	_c = c;
-	_a = a;
-	_b = b;
-}
-
 Point Elli::get_named_point(string name) const {
 	double incr = M_SQRT2 / 2;
+	double d_f = sqrt(pow(a, 2) - pow(b, 2));
 
 	if(name == "c")
-		return _c;
+		return c;
 	else if(name == "nw")
-		return Point(_c.x - _a * incr, _c.y + _b * incr);
+		return Point(c.x - a * incr, c.y + b * incr);
 	else if(name == "n")
-		return Point(_c.x, _c.y + _b);
+		return Point(c.x, c.y + b);
 	else if(name == "ne")
-		return Point(_c.x + _a * incr, _c.y + _b * incr);
+		return Point(c.x + a * incr, c.y + b * incr);
 	else if(name == "e")
-		return Point(_c.x + _a, _c.y);
+		return Point(c.x + a, c.y);
 	else if(name == "se")
-		return Point(_c.x + _a * incr, _c.y - _b * incr);
+		return Point(c.x + a * incr, c.y - b * incr);
 	else if(name == "s")
-		return Point(_c.x, _c.y - _b);
+		return Point(c.x, c.y - b);
 	else if(name == "sw")
-		return Point(_c.x - _a * incr, _c.y - _b * incr);
+		return Point(c.x - a * incr, c.y - b * incr);
 	else if(name == "w")
-		return Point(_c.x - _a, _c.y);
-	else if(_a != _b) {
-		double d_f = sqrt(pow(_a, 2) - pow(_b, 2));
-
-		if(name == "f1")
-			return Point(_c.x + d_f, _c.y);
-		else if(name == "f2")
-			return Point(_c.x - d_f, _c.y);
-		else
-			throw invalid_argument("Point doesn't exist.");
-	} else
+		return Point(c.x - a, c.y);
+	else if(name == "f1")
+		return Point(c.x + d_f, c.y);
+	else if(name == "f2")
+		return Point(c.x - d_f, c.y);
+	else
 		throw invalid_argument("Point doesn't exist.");
 }
 
+domain Elli::get_domain() const {
+	return {Point(c.x - a, c.y - b), Point(c.x + a, c.y + b)};
+}
+
 bool Elli::contains(Point p) const {
-	return pow((p.x - _c.x) / _a, 2) + pow((_c.y - p.y) / _b, 2) <= 1.0;
+	return pow((p.x - c.x) * b, 2) + pow((c.y - p.y) * a, 2) <= ab2;
+}
+
+/********/
+/* CIRC */
+/********/
+
+Point Circ::get_named_point(string name) const {
+	if(name == "f1" || name == "f2")
+		throw invalid_argument("Point doesn't exist.");
+
+	return Elli::get_named_point(name);
+}
+
+bool Circ::contains(Point p) const {
+	return pow(p.x - c.x, 2) + pow(p.y - c.y, 2) <= a2;
 }
 
 /********/
 /* RECT */
 /********/
 
-Rect::Rect(string name, Point c, double width, double height) {
-	Rect::name = name;
-	_c = c;
-	_width = width;
-	_height = height;
-	_mid_width = _width / 2;
-	_mid_height = _height / 2;
-}
-
 Point Rect::get_named_point(string name) const {
 	if(name == "c")
-		return _c;
+		return c;
 	else if(name == "nw")
-		return Point(_c.x - _mid_width, _c.y + _mid_height);
+		return Point(c.x - mid_width, c.y + mid_height);
 	else if(name == "n")
-		return Point(_c.x, _c.y + _mid_height);
+		return Point(c.x, c.y + mid_height);
 	else if(name == "ne")
-		return Point(_c.x + _mid_width, _c.y + _mid_height);
+		return Point(c.x + mid_width, c.y + mid_height);
 	else if(name == "e")
-		return Point(_c.x + _mid_width, _c.y);
+		return Point(c.x + mid_width, c.y);
 	else if(name == "se")
-		return Point(_c.x + _mid_width, _c.y - _mid_height);
+		return Point(c.x + mid_width, c.y - mid_height);
 	else if(name == "s")
-		return Point(_c.x, _c.y - _mid_height);
+		return Point(c.x, c.y - mid_height);
 	else if(name == "sw")
-		return Point(_c.x - _mid_width, _c.y - _mid_height);
+		return Point(c.x - mid_width, c.y - mid_height);
 	else if(name == "w")
-		return Point(_c.x - _mid_width, _c.y);
+		return Point(c.x - mid_width, c.y);
 	else
 		throw invalid_argument("Point doesn't exist.");
 }
 
+domain Rect::get_domain() const {
+	return {get_named_point("sw"), get_named_point("ne")};
+}
+
 bool Rect::contains(Point p) const {
-	return abs(p.x - _c.x) <= _mid_width && abs(p.y - _c.y) <= _mid_height;
+	return abs(p.x - c.x) <= mid_width && abs(p.y - c.y) <= mid_height;
 }
 
 /*******/
 /* TRI */
 /*******/
 
-Tri::Tri(string name, Point v0, Point v1, Point v2) {
-	Tri::name = name;
-	_v0 = v0;
-	_v1 = v1;
-	_v2 = v2;
-}
-
 Point Tri::get_named_point(string name) const {
 	if(name == "c")
-		return Point((_v0.x + _v1.x + _v2.x) / 3, (_v0.y + _v1.y + _v2.y) / 3);
+		return Point((v0.x + v1.x + v2.x) / 3, (v0.y + v1.y + v2.y) / 3);
 	else if(name == "v0")
-		return _v0;
+		return v0;
 	else if(name == "v1")
-		return _v1;
+		return v1;
 	else if(name == "v2")
-		return _v2;
+		return v2;
 	else if(name == "s01")
-		return Point((_v0.x + _v1.x) / 2, (_v0.y + _v1.y) / 2);
+		return Point((v0.x + v1.x) / 2, (v0.y + v1.y) / 2);
 	else if(name == "s02")
-		return Point((_v0.x + _v2.x) / 2, (_v0.y + _v2.y) / 2);
+		return Point((v0.x + v2.x) / 2, (v0.y + v2.y) / 2);
 	else if(name == "s12")
-		return Point((_v1.x + _v2.x) / 2, (_v1.y + _v2.y) / 2);
+		return Point((v1.x + v2.x) / 2, (v1.y + v2.y) / 2);
 	else
 		throw invalid_argument("Point doesn't exist.");
 }
 
+domain Tri::get_domain() const {
+	vector<Point> vertices{v0, v1, v2};
+
+	return Shape::get_domain(vertices);
+}
+
 bool Tri::contains(Point p) const {
-	double d1 = (p.x - _v1.x) * (_v0.y - _v1.y) - (_v0.x - _v1.x) * (p.y - _v1.y);
-	double d2 = (p.x - _v2.x) * (_v1.y - _v2.y) - (_v1.x - _v2.x) * (p.y - _v2.y);
-	double d3 = (p.x - _v0.x) * (_v2.y - _v0.y) - (_v2.x - _v0.x) * (p.y - _v0.y);
+	double d1 = (p.x - v1.x) * (v0.y - v1.y) - (v0.x - v1.x) * (p.y - v1.y);
+	double d2 = (p.x - v2.x) * (v1.y - v2.y) - (v1.x - v2.x) * (p.y - v2.y);
+	double d3 = (p.x - v0.x) * (v2.y - v0.y) - (v2.x - v0.x) * (p.y - v0.y);
 
 	return !(((d1 < 0) || (d2 < 0) || (d3 < 0)) && ((d1 > 0) || (d2 > 0) || (d3 > 0)));
 }
@@ -180,65 +186,82 @@ bool Tri::contains(Point p) const {
 /* SHIFT */
 /*********/
 
-Shift::Shift(string name, Point p, shared_ptr<Shape> ref_shape) {
-	Shift::name = name;
-	_p = p;
-	_p_inv = Point(- p.x, - p.y);
-	_ref_shape = ref_shape;
+Point Shift::get_named_point(string name) const {
+	return (ref_shape->get_named_point(name)).shift(t);
 }
 
-Point Shift::get_named_point(string name) const {
-	Point p = _ref_shape->get_named_point(name);
-	p.shift(_p);
+domain Shift::get_domain() const {
+	domain ref_dom = ref_shape->get_domain();
 
-	return p;
+	return {ref_dom[0].shift(t), ref_dom[1].shift(t)};
 }
 
 bool Shift::contains(Point p) const {
-	p.shift(_p_inv);
-
-	return _ref_shape->contains(p);
+	return ref_shape->contains(p.shift(t_inv));
 }
 
 /*******/
 /* ROT */
 /*******/
 
-Rot::Rot(string name, double angle, Point p, shared_ptr<Shape> ref_shape) {
-	Rot::name = name;
-	_angle = angle;
-	_p = p;
-	_ref_shape = ref_shape;
+Point Rot::get_named_point(string name) const {
+	return (ref_shape->get_named_point(name)).rotate(r, angle);
 }
 
-Point Rot::get_named_point(string name) const {
-	Point p = _ref_shape->get_named_point(name);
-	p.rotate(_p, _angle);
+domain Rot::get_domain() const {
+	domain ref_dom = ref_shape->get_domain();
+	vector<Point> vertices;
 
-	return p;
+	Point v0(ref_dom[0].x, ref_dom[1].y);
+	Point v1(ref_dom[1].x, ref_dom[0].y);
+	Point v2(ref_dom[0].x, ref_dom[0].y);
+	Point v3(ref_dom[1].x, ref_dom[1].y);
+
+	vertices.push_back(v0.rotate(r, angle));
+	vertices.push_back(v1.rotate(r, angle));
+	vertices.push_back(v2.rotate(r, angle));
+	vertices.push_back(v3.rotate(r, angle));
+
+	return Shape::get_domain(vertices);
 }
 
 bool Rot::contains(Point p) const {
-	p.rotate(_p, - _angle);
-
-	return _ref_shape->contains(p);
+	return ref_shape->contains(p.rotate(r, - angle));
 }
 
 /*********/
 /* UNION */
 /*********/
 
-Union::Union(string name, vector<shared_ptr<Shape>> shapes) {
-	Union::name = name;
-	_shapes = shapes;
+Point Union::get_named_point(string name) const {
+	return shapes.at(0)->get_named_point(name);
 }
 
-Point Union::get_named_point(string name) const {
-	return _shapes.at(0)->get_named_point(name);
+domain Union::get_domain() const {
+	domain dom = shapes.at(0)->get_domain();
+	Point lb = dom[0], ur = dom[1];
+
+	for(auto e = shapes.cbegin() + 1; e != shapes.cend(); e++) {
+		dom = (*e)->get_domain();
+
+		if(dom[0].x < lb.x)
+			lb.x = dom[0].x;
+
+		if(dom[0].y < lb.y)
+			lb.y = dom[0].y;
+
+		if(dom[1].x > ur.x)
+			ur.x = dom[1].x;
+
+		if(dom[1].y > ur.y)
+			ur.y = dom[1].y;
+	}
+
+	return {lb, ur};
 }
 
 bool Union::contains(Point p) const {
-	for(const auto& shape : _shapes)
+	for(const auto& shape : shapes)
 		if(shape->contains(p))
 			return true;
 
@@ -249,16 +272,14 @@ bool Union::contains(Point p) const {
 /* DIFF */
 /********/
 
-Diff::Diff(string name, shared_ptr<Shape> shape_from, shared_ptr<Shape> shape_to) {
-	Diff::name = name;
-	_shape_from = shape_from;
-	_shape_to = shape_to;
+Point Diff::get_named_point(string name) const {
+	return shape_in->get_named_point(name);
 }
 
-Point Diff::get_named_point(string name) const {
-	return _shape_from->get_named_point(name);
+domain Diff::get_domain() const {
+	return shape_in->get_domain();
 }
 
 bool Diff::contains(Point p) const {
-	return _shape_from->contains(p) && !_shape_to->contains(p);
+	return shape_in->contains(p) && !shape_out->contains(p);
 }

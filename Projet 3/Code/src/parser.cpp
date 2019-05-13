@@ -1,22 +1,20 @@
-#include <fstream>
 #include <iostream>
-#include <cstdint>
+#include <fstream>
 #include <cmath>
-#include <algorithm>
+#include <cstdint>
+#include <cstdlib>
 
 #include "headers/parser.hpp"
 
 using namespace std;
 
-/******************/
 /* Public methods */
-/******************/
 
-Parser::Parser(const string fname) {
+Parser::Parser(string fname) {
 	if(fname.empty())
 		print_error("Filename is empty.");
 
-	Parser::filename = fname;
+	filename = fname;
 }
 
 void Parser::parse_file() {
@@ -32,27 +30,13 @@ void Parser::print_stats() const {
 	cout << "Number of fills : " << fills.size() << endl;
 }
 
-size_t Parser::get_width() const {
-	return _width;
-}
-
-size_t Parser::get_height() const {
-	return _height;
-}
-
-vector<shared_ptr<Shape>> Parser::get_shapes() const {
-	return _shapes;
-}
-
-/*******************/
 /* Private methods */
-/*******************/
 
 /****************************/
 /* Token conversion methods */
 /****************************/
 
-token Parser::create_token(const unsigned int line, const unsigned int col, const string content, ifstream& file) const {
+token Parser::create_token(unsigned int line, unsigned int col, string content, ifstream& file) const {
 	unsigned int nb_char = 0, nb_digit = 0, nb_point = 0, nb_operator = 0;
 	unsigned int content_length = content.length();
 	token t = {line, col - content_length, 0, content};
@@ -92,13 +76,13 @@ token Parser::create_token(const unsigned int line, const unsigned int col, cons
 	return t;
 }
 
-token Parser::create_token(const unsigned int line, const unsigned int col, const unsigned int type, const string content) const {
+token Parser::create_token(unsigned int line, unsigned int col, unsigned int type, string content) const {
 	token t = {line, unsigned(col - content.length()), type, content};
 
 	return t;
 }
 
-void Parser::push_token(const token t, string& buffer) {
+void Parser::push_token(token t, string& buffer) {
 	if(!buffer.empty()) {
 		file_content.push_back(t);
 		buffer.clear();
@@ -124,24 +108,26 @@ void Parser::convert_token() {
 		for(char c : line_content) {
 			col++;
 
-			if(is_in(SPECIAL_CHARS, c)) {
+			if(c == '#') {
 				push_token(create_token(line, col, buffer, file), buffer);
 
-				if(c == '#') {
-					break;
-				} else if(c == char(32)) {
-					continue;
-				} else {
-					buffer = c;
+				break;
+			} else if(c == char(32)) {
+				push_token(create_token(line, col, buffer, file), buffer);
 
-					switch(c) {
-						case '{': push_token(create_token(line, col, OPEN_BRACE, buffer), buffer); break;
-						case '}': push_token(create_token(line, col, CLOSE_BRACE, buffer), buffer); break;
-						case '(': push_token(create_token(line, col, OPEN_PAR, buffer), buffer); break;
-						case ')': push_token(create_token(line, col, CLOSE_PAR, buffer), buffer); break;
-						case '*':
-						case '/': push_token(create_token(line, col, OPERATOR, buffer), buffer); break;
-					}
+				continue;
+			} else if(is_in(SPECIAL_CHARS, c)) {
+				push_token(create_token(line, col, buffer, file), buffer);
+
+				buffer = c;
+
+				switch(c) {
+					case '{': push_token(create_token(line, col, OPEN_BRACE, buffer), buffer); break;
+					case '}': push_token(create_token(line, col, CLOSE_BRACE, buffer), buffer); break;
+					case '(': push_token(create_token(line, col, OPEN_PAR, buffer), buffer); break;
+					case ')': push_token(create_token(line, col, CLOSE_PAR, buffer), buffer); break;
+					case '*':
+					case '/': push_token(create_token(line, col, OPERATOR, buffer), buffer); break;
 				}
 			} else if(c == '.') {
 				token t = create_token(line, col, buffer, file);
@@ -167,7 +153,7 @@ void Parser::convert_token() {
 						buffer += c;
 					}
 				}
-			} else if(is_in(SPECIAL_POINTS, c)) {
+			} else if(c == 'x' || c == 'y') {
 				if(buffer.back() == '.') {
 					push_token(create_token(line, col, POINT, buffer), buffer);
 
@@ -248,162 +234,187 @@ void Parser::parse_size() {
 
 	double intpart;
 
-	_width = parse_number();
-	_height = parse_number();
+	width = parse_number();
+	height = parse_number();
 
-	if(!(_width >= 0.0 && _height >= 0.0 && modf(_width, &intpart) == 0.0 && modf(_height, &intpart) == 0.0))
-		print_error("dimensions of the image must be positive integers.");
+	if(width < 0.0 || height < 0.0 || modf(width, &intpart) != 0.0 || modf(height, &intpart) != 0.0)
+		print_error("Dimensions of the image must be positive integers.");
 }
 
 void Parser::parse_circ() {
-	string name = parse_name(NEW_SHAPE);
+	string name = parse_name();
 	Point center = parse_point();
 	double radius = parse_number();
 
-	if(!(radius > 0.0))
-		print_error("radius of circle must be positive.");
+	auto it = shapes.find(name);
 
-	_shapes.push_back(make_shared<Elli>(Elli(name, center, radius, radius)));
+	if(it != shapes.end())
+		print_error("Shape name '" + name + "' already defined.");
+
+	if(radius <= 0.0)
+		print_error("Radius of circle must be positive.");
+
+	shapes[name] = make_shared<Circ>(Circ(center, radius));
 
 	parse_instr();
 }
 
 void Parser::parse_elli() {
-	string name = parse_name(NEW_SHAPE);
+	string name = parse_name();
 	Point center = parse_point();
 	double a = parse_number();
 	double b = parse_number();
 
-	if(!(a > 0.0 && b > 0.0))
-		print_error("radii of ellipse must be positive.");
+	auto it = shapes.find(name);
+
+	if(it != shapes.end())
+		print_error("Shape name '" + name + "' already defined.");
+
+	if(a <= 0.0 || b <= 0.0)
+		print_error("Radii of ellipse must be positive.");
 
 	if(a < b)
-		print_error("semi-major radius must be greater than semi-minor radius.");
+		print_error("Semi-major radius must be greater than semi-minor radius.");
 
-	_shapes.push_back(make_shared<Elli>(Elli(name, center, a, b)));
+	shapes[name] = make_shared<Elli>(Elli(center, a, b));
 
 	parse_instr();
 }
 
 void Parser::parse_rect() {
-	string name = parse_name(NEW_SHAPE);
+	string name = parse_name();
 	Point center = parse_point();
-	double width = parse_number();
-	double height = parse_number();
+	double w = parse_number();
+	double h = parse_number();
 
-	if(!(width > 0.0 && height > 0.0))
-		print_error("dimensions of rectangle must be positive.");
+	auto it = shapes.find(name);
 
-	_shapes.push_back(make_shared<Rect>(Rect(name, center, width, height)));
+	if(it != shapes.end())
+		print_error("Shape name '" + name + "' already defined.");
+
+	if(w <= 0.0 || h <= 0.0)
+		print_error("Dimensions of rectangle must be positive.");
+
+	shapes[name] = make_shared<Rect>(Rect(center, w, h));
 
 	parse_instr();
 }
 
 void Parser::parse_tri() {
-	string name = parse_name(NEW_SHAPE);
+	string name = parse_name();
 	Point v0 = parse_point();
 	Point v1 = parse_point();
 	Point v2 = parse_point();
 
-	_shapes.push_back(make_shared<Tri>(Tri(name, v0, v1, v2)));
+	auto it = shapes.find(name);
+
+	if(it != shapes.end())
+		print_error("Shape name '" + name + "' already defined.");
+
+	shapes[name] = make_shared<Tri>(Tri(v0, v1, v2));
 
 	parse_instr();
 }
 
 void Parser::parse_shift() {
-	string name = parse_name(NEW_SHAPE);
+	string name = parse_name();
 	Point t = parse_point();
-	string shift = parse_name(CHECK_SHAPE);
+	string shift = parse_name();
 
-	size_t i;
+	auto it = shapes.find(name);
 
-	for(i = 0; i < _shapes.size(); i++)
-		if(_shapes.at(i)->get_name() == shift)
-			break;
+	if(it != shapes.end())
+		print_error("Shape name '" + name + "' already defined.");
 
-	_shapes.push_back(make_shared<Shift>(Shift(name, t, _shapes.at(i))));
+	it = shapes.find(shift);
+
+	if(it == shapes.end())
+		print_error("Shape '" + shift + "' doesn't exist.");
+
+	shapes[name] = make_shared<Shift>(Shift(t, it->second));
 
 	parse_instr();
 }
 
 void Parser::parse_rot() {
-	string name = parse_name(NEW_SHAPE);
+	string name = parse_name();
 	double angle = parse_number();
-	Point p = parse_point();
-	string rot = parse_name(CHECK_SHAPE);
+	Point r = parse_point();
+	string rot = parse_name();
 
-	size_t i;
+	auto it = shapes.find(name);
 
-	for(i = 0; i < _shapes.size(); i++)
-		if(_shapes.at(i)->get_name() == rot)
-			break;
+	if(it != shapes.end())
+		print_error("Shape name '" + name + "' already defined.");
 
-	_shapes.push_back(make_shared<Rot>(Rot(name, angle, p, _shapes.at(i))));
+	it = shapes.find(rot);
+
+	if(it == shapes.end())
+		print_error("Shape '" + rot + "' doesn't exist.");
+
+	shapes[name] = make_shared<Rot>(Rot(angle, r, it->second));
 
 	parse_instr();
 }
 
 void Parser::parse_union() {
 	vector<shared_ptr<Shape>> union_shapes;
-	string temp;
+	string shape_name;
 
-	string name = parse_name(NEW_SHAPE);
+	string name = parse_name();
+
+	auto it = shapes.find(name);
+
+	if(it != shapes.end())
+		print_error("Shape name '" + name + "' already defined.");
 
 	token t = next_token();
 
 	if(t.type != OPEN_BRACE)
 		print_error(t, "expected '{' (got '" + t.content + "').");
 
-	temp = parse_name(CHECK_SHAPE);
+	do {
+		shape_name = parse_name();
 
-	size_t i;
+		it = shapes.find(shape_name);
 
-	for(i = 0; i < _shapes.size(); i++)
-		if(_shapes.at(i)->get_name() == temp)
-			break;
+		if(it == shapes.end())
+			print_error("Shape '" + shape_name + "' doesn't exist.");
 
-	union_shapes.push_back(_shapes.at(i));
-
-	while(next_token(0).type == STRING) {
-		temp = parse_name(CHECK_SHAPE);
-
-		for(i = 0; i < _shapes.size(); i++)
-			if(_shapes.at(i)->get_name() == temp)
-				break;
-
-		union_shapes.push_back(_shapes.at(i));
-	}
+		union_shapes.push_back(it->second);
+	} while(next_token(0).type == STRING);
 
 	t = next_token();
 
 	if(t.type != CLOSE_BRACE)
 		print_error(t, "expected '}' (got '" + t.content + "')");
 
-	_shapes.push_back(make_shared<Union>(Union(name, union_shapes)));
+	shapes[name] = make_shared<Union>(Union(union_shapes));
 
 	parse_instr();
 }
 
 void Parser::parse_diff() {
-	string name = parse_name(NEW_SHAPE);
-	string base = parse_name(CHECK_SHAPE);
-	string sub = parse_name(CHECK_SHAPE);
+	string name = parse_name();
+	string shape_in = parse_name();
+	string shape_out = parse_name();
 
-	shared_ptr<Shape> shape_from;
+	auto it = shapes.find(name);
 
-	size_t i;
+	if(it != shapes.end())
+		print_error("Shape name '" + name + "' already defined.");
 
-	for(i = 0; i < _shapes.size(); i++)
-		if(_shapes.at(i)->get_name() == base)
-			break;
+	auto it_in = shapes.find(shape_in);
 
-	shape_from = _shapes.at(i);
+	if(it_in == shapes.end())
+		print_error("Shape '" + shape_in + "' doesn't exist.");
 
-	for(i = 0; i < _shapes.size(); i++)
-		if(_shapes.at(i)->get_name() == sub)
-			break;
+	auto it_out = shapes.find(shape_out);
 
-	_shapes.push_back(make_shared<Diff>(Diff(name, shape_from, _shapes.at(i))));
+	if(it_out == shapes.end())
+		print_error("Shape '" + shape_out + "' doesn't exist.");
+
+	shapes[name] = make_shared<Diff>(Diff(it_in->second, it_out->second));
 
 	parse_instr();
 }
@@ -424,8 +435,8 @@ Color Parser::parse_color_def() {
 			g = parse_number();
 			b = parse_number();
 
-			if(!(r >= 0.0 && r <= 1.0 && g >= 0.0 && g <= 1.0 && b >= 0.0 && b <= 1.0))
-				print_error("color values must be between 0.0 and 1.0.");
+			if(r < 0.0 || r > 1.0 || g < 0.0 || g > 1.0 || b < 0.0 || b > 1.0)
+				print_error("Color values must be between 0.0 and 1.0.");
 
 			red = uint8_t(round(r * 255));
 			green = uint8_t(round(g * 255));
@@ -440,18 +451,18 @@ Color Parser::parse_color_def() {
 
 			break;
 
-		case STRING:
-			name = parse_name(CHECK_COLOR);
+		case STRING: {
+			name = parse_name();
 
-			size_t i;
+			auto it = colors.find(name);
 
-			for(i = 0; i < _colors.size(); i++)
-				if(_colors.at(i).first == name)
-					break;
+			if(it == colors.end())
+				print_error("Color name '" + name + "' doesn't exist.");
 
-			c = _colors.at(i).second;
+			c = it->second;
 
 			break;
+		}
 
 		default: print_error(t, "expected '{' or a color name (got '" + t.content + "').");
 	}
@@ -460,78 +471,39 @@ Color Parser::parse_color_def() {
 }
 
 void Parser::parse_color() {
-	string name = parse_name(NEW_COLOR);
+	string name = parse_name();
 	Color c = parse_color_def();
 
-	_colors.push_back(make_pair(name, c));
+	auto it = colors.find(name);
+
+	if(it != colors.end())
+		print_error("Color name '" + name + "' already defined.");
+
+	colors[name] = c;
 
 	parse_instr();
 }
 
 void Parser::parse_fill() {
-	string name = parse_name(NEW_FILL);
+	string name = parse_name();
 	Color c = parse_color_def();
 
-	size_t i;
+	auto it = shapes.find(name);
 
-	for(i = 0; i < _shapes.size(); i++)
-		if(_shapes.at(i)->get_name() == name)
-			break;
+	if(it == shapes.end())
+		print_error("Shape name '" + name + "' doesn't exist.");
 
-	_shapes.at(i)->set_color(c);
-
-	auto it = _shapes.begin() + i;
-	rotate(it, it + 1, _shapes.end());
+	it->second->set_color(c);
+	fills.push_back(it->second);
 
 	parse_instr();
 }
 
-string Parser::parse_name(const unsigned int& parse_name_type) {
+string Parser::parse_name() {
 	token name = next_token();
-	token exist;
 
 	if(name.type != STRING)
 		print_error(name, "expected string type for name (got '" + name.content + "').");
-
-	switch(parse_name_type) {
-		case NEW_SHAPE:
-			if(is_in(shapes, name, exist))
-				print_error(name, "shape '" + name.content + "' already defined at " + to_string(exist.line) + ":" + to_string(exist.col) + ".");
-			else
-				shapes.push_back(name);
-
-			break;
-
-		case NEW_COLOR:
-			if(is_in(colors, name, exist))
-				print_error(name, "color '" + name.content + "' already defined at " + to_string(exist.line) + ":" + to_string(exist.col) + ".");
-			else
-				colors.push_back(name);
-
-			break;
-
-		case NEW_FILL:
-			if(!is_in(shapes, name, exist))
-				print_error(name, "shape '" + name.content + "' doesn't exist.");
-			else
-				fills.push_back(name);
-
-			break;
-
-		case CHECK_SHAPE:
-			if(!is_in(shapes, name, exist))
-				print_error(name, "shape '" + name.content + "' doesn't exist.");
-
-			break;
-
-		case CHECK_COLOR:
-			if(!is_in(colors, name, exist))
-				print_error(name, "color '" + name.content + "' doesn't exist.");
-
-			break;
-
-		default: print_error("parse_name : unknown operation.");
-	}
 
 	return name.content;
 }
@@ -549,7 +521,7 @@ double Parser::parse_number() {
 
 		t = next_token();
 
-		if(!is_in(SPECIAL_POINTS, t.content.at(0)))
+		if(!(t.content.at(0) == 'x' || t.content.at(0) == 'y'))
 			print_error(t, "'" + t.content + "' is not a valid coordinate.");
 
 		if(t.content == "x")
@@ -564,10 +536,9 @@ double Parser::parse_number() {
 }
 
 Point Parser::parse_point() {
-	size_t i;
-	double num, num1, num2;
+	double x, y, n;
 	string name;
-	Point p, tmp;
+	Point p;
 
 	token t = next_token(0);
 
@@ -575,10 +546,10 @@ Point Parser::parse_point() {
 		case OPEN_BRACE:
 			t = next_token();
 
-			num1 = parse_number();
-			num2 = parse_number();
+			x = parse_number();
+			y = parse_number();
 
-			p = Point(num1, num2);
+			p = Point(x, y);
 
 			t = next_token();
 
@@ -587,8 +558,13 @@ Point Parser::parse_point() {
 
 			break;
 
-		case STRING:
-			name = parse_name(CHECK_SHAPE);
+		case STRING: {
+			name = parse_name();
+
+			auto it = shapes.find(name);
+
+			if(it == shapes.end())
+				print_error("Shape name '" + name + "' doesn't exist.");
 
 			t = next_token();
 
@@ -600,17 +576,14 @@ Point Parser::parse_point() {
 			if(t.type != STRING)
 				print_error(t, "expected a point name (got '" + t.content + "').");
 
-			for(i = 0; i < _shapes.size(); i++)
-				if(_shapes.at(i)->get_name() == name)
-					break;
-
 			try {
-				p = _shapes.at(i)->get_named_point(t.content);
+				p = it->second->get_named_point(t.content);
 			} catch(const invalid_argument& e) {
 				print_error(t, "point " + t.content + "doesn't exist.");
 			}
 
 			break;
+		}
 
 		case OPEN_PAR:
 			t = next_token();
@@ -619,43 +592,40 @@ Point Parser::parse_point() {
 			if(t.type != OPERATOR)
 				print_error(t, "expected an operator (+, -, * or /).");
 
+			p = parse_point();
+
 			switch(t.content.at(0)) {
 				case '+':
-					do {
-						tmp = p;
-						p = tmp + parse_point();
+					t = next_token(0);
 
+					while(t.type == OPEN_BRACE || t.type == STRING || t.type == OPEN_PAR) {
+						p += parse_point();
 						t = next_token(0);
-					} while(t.type == OPEN_BRACE || t.type == STRING || t.type == OPEN_PAR);
+					}
 
 					break;
 
 				case '-':
-					p = parse_point();
 					t = next_token(0);
 
 					while(t.type == OPEN_BRACE || t.type == STRING || t.type == OPEN_PAR) {
-						tmp = parse_point();
+						p -= parse_point();
 						t = next_token(0);
-
-						p = p - tmp;
 					}
 					
 					break;
 
 				case '*':
-					tmp = parse_point();
-					num = parse_number();
-
-					p = tmp * num;
+					p *= parse_number();
 
 					break;
-
 				case '/':
-					tmp = parse_point();
-					num = parse_number();
+					n = parse_number();
 
-					p = tmp / num;
+					if(n == 0.0)
+						print_error(t, "division by 0 not allowed.");
+
+					p /= n;
 
 					break;
 
@@ -679,13 +649,13 @@ Point Parser::parse_point() {
 /* Error management method */
 /***************************/
 
-[[noreturn]] void Parser::print_error(const string& msg) const {
+void Parser::print_error(const string& msg) const {
 	cerr << msg << endl;
 
 	exit(EXIT_FAILURE);
 }
 
-[[noreturn]] void Parser::print_error(const token& t, const string& msg) const {
+void Parser::print_error(const token& t, const string& msg) const {
 	cerr << filename << ":" << t.line << ":" << t.col << ": error: " << msg << endl;
 
 	exit(EXIT_FAILURE);
@@ -695,21 +665,10 @@ Point Parser::parse_point() {
 /* Utility methods */
 /*******************/
 
-bool Parser::is_in(const vector<char>& v, const char& c) const {
-	for(char v_c : v)
-		if(v_c == c)
+bool Parser::is_in(const array<char, 6>& a, const char& c) const {
+	for(const char& a_c : a)
+		if(a_c == c)
 			return true;
-
-	return false;
-}
-
-bool Parser::is_in(const vector<token>& v, const token& t, token& exist) const {
-	for(token v_t : v)
-		if(v_t.content == t.content) {
-			exist = v_t;
-
-			return true;
-		}
 
 	return false;
 }

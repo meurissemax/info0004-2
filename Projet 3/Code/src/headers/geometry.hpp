@@ -1,9 +1,11 @@
 #ifndef GEOMETRY_HPP
 #define GEOMETRY_HPP
 
+#include <array>
 #include <string>
-#include <vector>
+#include <cmath>
 #include <memory>
+#include <vector>
 
 #include "graphics.hpp"
 
@@ -15,15 +17,15 @@
 
 struct Point {
 	Point() : x(0), y(0) { }
-	Point(double _x, double _y) : x(_x), y(_y) { }
+	Point(double x, double y) : x(x), y(y) { }
 
-	Point operator+(Point p) const { return Point(x + p.x, y + p.y); }
-	Point operator-(Point p) const { return Point(x - p.x, y - p.y); }
-	Point operator*(double n) const { return Point(x * n, y * n); }
-	Point operator/(double n) const { return Point(x / n, y / n); }
+	void operator +=(Point p) { x += p.x; y += p.y; }
+	void operator -=(Point p) { x -= p.x; y -= p.y; }
+	void operator *=(double n) { x *= n; y *= n; }
+	void operator /=(double n) { x /= n; y /= n; }
 
-	void shift(Point p);
-	void rotate(Point p, double angle);
+	Point shift(Point p) const;
+	Point rotate(Point p, double angle) const;
 
 	double x, y;
 };
@@ -34,24 +36,22 @@ struct Point {
 /* SHAPE */
 /*********/
 
+typedef std::array<Point, 2> domain;
+
 class Shape {
 public:
-	Shape() : fill(false) { }
+	Shape() : color(Color()) { }
 	virtual ~Shape() = default;
 
-	std::string get_name() const { return name; }
-
-	bool is_fill() const { return fill; }
-	void set_color(Color c);
-	Color get_color() const;
+	void set_color(Color c) { color = c; }
+	Color get_color() const { return color; }
 
 	virtual Point get_named_point(std::string name) const = 0;
+	virtual domain get_domain() const = 0;
+	domain get_domain(std::vector<Point> vertices) const;
 	virtual bool contains(Point p) const = 0;
 
 protected:
-	std::string name;
-
-	bool fill;
 	Color color;
 };
 
@@ -63,15 +63,30 @@ protected:
 
 class Elli : public Shape {
 public:
+	virtual Point get_named_point(std::string name) const override;
+	domain get_domain() const override;
+	virtual bool contains(Point p) const override;
+
+protected:
+	Elli(Point c, double a, double b) : c(c), a(a), b(b), a2(pow(a, 2)), ab2(pow(a * b, 2)) { }
+	friend class Parser;
+
+	Point c;
+	double a, b, a2, ab2;
+};
+
+/********/
+/* CIRC */
+/********/
+
+class Circ : public Elli {
+public:
 	Point get_named_point(std::string name) const override;
 	bool contains(Point p) const override;
 
 private:
-	Elli(std::string name, Point c, double a, double b);
+	Circ(Point c, double radius) : Elli(c, radius, radius) { }
 	friend class Parser;
-
-	Point _c;
-	double _a, _b;
 };
 
 /********/
@@ -81,14 +96,15 @@ private:
 class Rect : public Shape {
 public:
 	Point get_named_point(std::string name) const override;
+	domain get_domain() const override;
 	bool contains(Point p) const override;
 
 private:
-	Rect(std::string name, Point c, double width, double height);
+	Rect(Point c, double width, double height) : c(c), width(width), height(height), mid_width(width / 2), mid_height(height / 2) { }
 	friend class Parser;
 
-	Point _c;
-	double _width, _height, _mid_width, _mid_height;
+	Point c;
+	double width, height, mid_width, mid_height;
 };
 
 /*******/
@@ -98,13 +114,14 @@ private:
 class Tri : public Shape {
 public:
 	Point get_named_point(std::string name) const override;
+	domain get_domain() const override;
 	bool contains(Point p) const override;
 
 private:
-	Tri(std::string name, Point v0, Point v1, Point v2);
+	Tri(Point v0, Point v1, Point v2) : v0(v0), v1(v1), v2(v2) { }
 	friend class Parser;
 
-	Point _v0, _v1, _v2;
+	Point v0, v1, v2;
 };
 
 /* Derived shapes */
@@ -116,14 +133,15 @@ private:
 class Shift : public Shape {
 public:
 	Point get_named_point(std::string name) const override;
+	domain get_domain() const override;
 	bool contains(Point p) const override;
 
 private:
-	Shift(std::string name, Point p, std::shared_ptr<Shape> ref_shape);
+	Shift(Point t, std::shared_ptr<Shape> ref_shape) : t(t), t_inv(Point(- t.x, - t.y)), ref_shape(ref_shape) { }
 	friend class Parser;
 
-	Point _p, _p_inv;
-	std::shared_ptr<Shape> _ref_shape;
+	Point t, t_inv;
+	std::shared_ptr<Shape> ref_shape;
 };
 
 /*******/
@@ -133,15 +151,16 @@ private:
 class Rot : public Shape {
 public:
 	Point get_named_point(std::string name) const override;
+	domain get_domain() const override;
 	bool contains(Point p) const override;
 
 private:
-	Rot(std::string name, double angle, Point p, std::shared_ptr<Shape> ref_shape);
+	Rot(double angle, Point r, std::shared_ptr<Shape> ref_shape) : angle(angle), r(r), ref_shape(ref_shape) { }
 	friend class Parser;
 
-	double _angle;
-	Point _p;
-	std::shared_ptr<Shape> _ref_shape;
+	double angle;
+	Point r;
+	std::shared_ptr<Shape> ref_shape;
 };
 
 /*********/
@@ -151,13 +170,14 @@ private:
 class Union : public Shape {
 public:
 	Point get_named_point(std::string name) const override;
+	domain get_domain() const override;
 	bool contains(Point p) const override;
 
 private:
-	Union(std::string name, std::vector<std::shared_ptr<Shape>> shapes);
+	Union(std::vector<std::shared_ptr<Shape>> shapes) : shapes(shapes) { }
 	friend class Parser;
 
-	std::vector<std::shared_ptr<Shape>> _shapes;
+	std::vector<std::shared_ptr<Shape>> shapes;
 };
 
 /********/
@@ -167,13 +187,14 @@ private:
 class Diff : public Shape {
 public:
 	Point get_named_point(std::string name) const override;
+	domain get_domain() const override;
 	bool contains(Point p) const override;
 
 private:
-	Diff(std::string name, std::shared_ptr<Shape> shape_from, std::shared_ptr<Shape> shape_to);
+	Diff(std::shared_ptr<Shape> shape_in, std::shared_ptr<Shape> shape_out) : shape_in(shape_in), shape_out(shape_out) { }
 	friend class Parser;
 
-	std::shared_ptr<Shape> _shape_from, _shape_to;
+	std::shared_ptr<Shape> shape_in, shape_out;
 };
 
 #endif

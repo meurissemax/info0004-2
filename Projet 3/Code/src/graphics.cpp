@@ -2,41 +2,35 @@
 
 #include "headers/graphics.hpp"
 
+using namespace std;
+
 /*********/
 /* IMAGE */
 /*********/
 
-Image::Image(size_t width, size_t height) {
-	_width = width;
-	_height = height;
-
-	_pixels = std::make_unique<Color[]>(width * height);
+Image::Image(size_t w, size_t h) {
+	width = w;
+	height = h;
+	pixels = make_unique<pair<bool, Color>[]>(w * h);
 }
 
-Color Image::operator()(size_t x, size_t y) const {
-	assert(x < _width);
-	assert(y < _height);
+pair<bool, Color>& Image::operator()(size_t x, size_t y) {
+	assert(x < width);
+	assert(y < height);
 
-	return _pixels[y * _width + x];
-}
-
-Color& Image::operator()(size_t x, size_t y) {
-	assert(x < _width);
-	assert(y < _height);
-
-	return _pixels[y * _width + x];
+	return pixels[y * width + x];
 }
 
 /*********/
 /* OTHER */
 /*********/
 
-std::ostream& operator<<(std::ostream& out, const Color& c) {
+ostream& operator<<(ostream& out, const Color& c) {
 	return out << c.red << c.green << c.blue;
 }
 
-std::ostream& operator<<(std::ostream& out, const Image& img) {
-	size_t width = img.width(), height = img.height();
+ostream& operator<<(ostream& out, Image& img) {
+	size_t width = img.get_width(), height = img.get_height();
 
 	assert(width > 0);
 	assert(height > 0);
@@ -45,7 +39,7 @@ std::ostream& operator<<(std::ostream& out, const Image& img) {
 
 	for(size_t y = 0; y < height; y++)
 		for(size_t x = 0; x < width; x++)
-			out << img(x, height - y - 1);
+			out << img(x, height - y - 1).second;
 
 	return out;
 }

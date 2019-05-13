@@ -2,21 +2,14 @@
 #define PARSER_HH
 
 #include <string>
-#include <cstdlib>
+#include <cstring>
 #include <vector>
 #include <memory>
-#include <utility>
+#include <array>
+#include <map>
 
 #include "geometry.hpp"
 #include "graphics.hpp"
-
-enum parse_name_type : unsigned int {
-	NEW_SHAPE,
-	NEW_COLOR,
-	NEW_FILL,
-	CHECK_SHAPE,
-	CHECK_COLOR
-};
 
 enum type : unsigned int {
 	END,			/// End of file
@@ -31,50 +24,46 @@ enum type : unsigned int {
 };
 
 struct token {
-	unsigned int line, col;
-	unsigned int type;
+	unsigned long line, col;
+	unsigned long type;
 	std::string content;
 };
 
 class Parser {
 public:
-	Parser() { }
-	Parser(const std::string fname);
+	Parser() { print_error("A file is required."); }
+	Parser(std::string fname);
 
 	void parse_file();
 	void print_stats() const;
 
-	size_t get_width() const;
-	size_t get_height() const;
-	std::vector<std::shared_ptr<Shape>> get_shapes() const;
+	size_t get_width() const { return width; }
+	size_t get_height() const { return height; }
+	std::vector<std::shared_ptr<Shape>> get_fills() const { return fills; }
 
 private:
-	const std::vector<char> SPECIAL_POINTS {'x', 'y'};
-	const std::vector<char> SPECIAL_CHARS {'#', '{', '}', '(', ')', '*', '/', char(32)}; /// char(32) = ' '
+	const std::array<char, 6> SPECIAL_CHARS {{'{', '}', '(', ')', '*', '/'}};
 
 	std::string filename;
 	std::vector<token> file_content;
 
-	unsigned int file_content_pos = 0;
-	unsigned int file_content_size;
+	unsigned long file_content_pos = 0;
+	unsigned long file_content_size;
 
-	std::vector<token> shapes;
-	std::vector<token> colors;
-	std::vector<token> fills;
+	std::map<std::string, std::shared_ptr<Shape>> shapes;
+	std::map<std::string, Color> colors;
 
-	size_t _width;
-	size_t _height;
-	std::vector<std::pair<std::string, Color>> _colors;
-	std::vector<std::shared_ptr<Shape>> _shapes;
+	size_t width, height;
+	std::vector<std::shared_ptr<Shape>> fills;
 
 	/****************************/
 	/* Token conversion methods */
 	/****************************/
 
-	token create_token(const unsigned int line, const unsigned int col, const std::string content, std::ifstream& file) const;
-	token create_token(const unsigned int line, const unsigned int col, const unsigned int type, const std::string content) const;
+	token create_token(unsigned int line, unsigned int col, std::string content, std::ifstream& file) const;
+	token create_token(unsigned int line, unsigned int col, unsigned int type, std::string content) const;
 
-	void push_token(const token t, std::string& buffer);
+	void push_token(token t, std::string& buffer);
 
 	void convert_token();
 
@@ -102,7 +91,7 @@ private:
 	void parse_color();
 	void parse_fill();
 
-	std::string parse_name(const unsigned int& instr_type);
+	std::string parse_name();
 
 	double parse_number();
 	Point parse_point();
@@ -111,15 +100,14 @@ private:
 	/* Error management method */
 	/***************************/
 
-	[[noreturn]] void print_error(const std::string& msg) const;
-	[[noreturn]] void print_error(const token& t, const std::string& msg) const;
+	void print_error(const std::string& msg) const;
+	void print_error(const token& t, const std::string& msg) const;
 
 	/*******************/
 	/* Utility methods */
 	/*******************/
-	
-	bool is_in(const std::vector<char>& v, const char& c) const;
-	bool is_in(const std::vector<token>& v, const token& t, token& exist) const;
+
+	bool is_in(const std::array<char, 6>& a, const char& c) const;
 };
 
 #endif

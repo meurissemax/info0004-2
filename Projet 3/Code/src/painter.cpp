@@ -18,7 +18,7 @@ int main(int argc, char* argv[]) {
 
 	size_t width, height;
 	string input, filename, extension;
-	vector<shared_ptr<Shape>> shapes;
+	vector<shared_ptr<Shape>> fills;
 
 	if(argc < 2 || argc > 2) {
 		cerr << "Usage : " << argv[0] << " INPUT_FILE" << endl;
@@ -34,14 +34,15 @@ int main(int argc, char* argv[]) {
 		return 1;
 	}
 
-	filename = input.substr(0, input.length() - VALID_EXT.size());
-	extension = input.substr(input.length() - VALID_EXT.size(), VALID_EXT.size());
+	extension = input.substr(input.length() - VALID_EXT.length(), VALID_EXT.length());
 
 	if(extension != VALID_EXT) {
 		cerr << "Extension of the input file must be '" << VALID_EXT << "'." << endl;
 
 		return 1;
 	}
+
+	filename = input.substr(0, input.find_last_of('.'));
 
 	Parser parser(input);
 
@@ -52,8 +53,8 @@ int main(int argc, char* argv[]) {
 	parser.parse_file();
 
 	auto end = chrono::steady_clock::now();
-    auto diff = end - start;
-    auto time_parser = chrono::duration <double, milli> (diff).count();
+	auto diff = end - start;
+	auto time_parser = chrono::duration <double, milli> (diff).count();
 
 	cout << "DONE in " << time_parser << " ms" << endl;
 	cout << SEP << endl;
@@ -64,7 +65,7 @@ int main(int argc, char* argv[]) {
 
 	width = parser.get_width();
 	height = parser.get_height();
-	shapes = parser.get_shapes();
+	fills = parser.get_fills();
 
 	ofstream outfile(filename + ".ppm", ios::binary);
 
@@ -80,15 +81,22 @@ int main(int argc, char* argv[]) {
 
 	Image img(width, height);
 
-	for(size_t i = 0; i < width; i++) {
-		for(size_t j = 0; j < height; j++) {
-			Point pixel(i + 0.5, j + 0.5);
+	size_t x_min, x_max, y_min, y_max;
+	domain dom;
 
-			for(auto e = shapes.rbegin(); e != shapes.rend(); e++) {
-				if((*e)->is_fill() && (*e)->contains(pixel)) {
-					img(i, j) = (*e)->get_color();
+	for(auto shape = fills.rbegin(); shape != fills.rend(); shape++) {
+		dom = (*shape)->get_domain();
 
-					break;
+		x_min = dom[0].x > 0 ? dom[0].x : 0;
+		x_max = dom[1].x + 1 < width - 1 ? dom[1].x + 1 : width - 1;
+		y_min = dom[0].y > 0 ? dom[0].y : 0;
+		y_max = dom[1].y + 1 < height - 1 ? dom[1].y + 1 : height - 1;
+
+		for(size_t x = x_min; x <= x_max; x++) {
+			for(size_t y = y_min; y <= y_max; y++) {
+				if(!img(x, y).first && (*shape)->contains(Point(double(x) + 0.5, double(y) + 0.5))) {
+					img(x, y).first = true;
+					img(x, y).second = (*shape)->get_color();
 				}
 			}
 		}
@@ -98,8 +106,8 @@ int main(int argc, char* argv[]) {
 	outfile.close(); 
 
 	end = chrono::steady_clock::now();
-    diff = end - start;
-    auto time_painter = chrono::duration <double, milli> (diff).count();
+	diff = end - start;
+	auto time_painter = chrono::duration <double, milli> (diff).count();
 
 	cout << "DONE in " << time_painter << " ms" << endl;
 	

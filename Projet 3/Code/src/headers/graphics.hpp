@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include <utility>
 #include <memory>
 #include <iostream>
 
@@ -23,19 +24,17 @@ struct Color {
 
 class Image {
 public:
-    Image() : _width(0), _height(0) { }
-    Image(size_t width, size_t height);
+    Image() : width(0), height(0) { }
+    Image(size_t w, size_t h);
 
-    size_t width() const { return _width; }
-    size_t height() const { return _height; }
+    size_t get_width() const { return width; }
+    size_t get_height() const { return height; }
 
-    Color operator()(size_t x, size_t y) const;
-    Color& operator()(size_t x, size_t y);
+    std::pair<bool, Color>& operator()(size_t x, size_t y);
 
 private:
-    size_t _width, _height;
-    
-    std::unique_ptr<Color[]> _pixels;
+    size_t width, height;
+    std::unique_ptr<std::pair<bool, Color>[]> pixels;
 };
 
 /*********/
@@ -43,6 +42,6 @@ private:
 /*********/
 
 std::ostream& operator<<(std::ostream& out, const Color& c);
-std::ostream& operator<<(std::ostream& out, const Image& img);
+std::ostream& operator<<(std::ostream& out, Image& img);
 
 #endif
