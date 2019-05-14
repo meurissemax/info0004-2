@@ -4,6 +4,8 @@
 #include <memory>
 #include <iostream>
 #include <fstream>
+#include <algorithm>
+
 #include <chrono>
 
 #include "headers/geometry.hpp"
@@ -87,13 +89,13 @@ int main(int argc, char* argv[]) {
 	for(auto shape = fills.rbegin(); shape != fills.rend(); shape++) {
 		dom = (*shape)->get_domain();
 
-		x_min = dom[0].x > 0 ? dom[0].x : 0;
-		x_max = dom[1].x + 1 < width - 1 ? dom[1].x + 1 : width - 1;
-		y_min = dom[0].y > 0 ? dom[0].y : 0;
-		y_max = dom[1].y + 1 < height - 1 ? dom[1].y + 1 : height - 1;
+		x_min = max(int(dom[0].x), int(0));
+		y_min = max(int(dom[0].y), int(0));
+		x_max = min(int(++dom[1].x), int(width));
+		y_max = min(int(++dom[1].y), int(height));
 
-		for(size_t x = x_min; x <= x_max; x++) {
-			for(size_t y = y_min; y <= y_max; y++) {
+		for(size_t x = x_min; x < x_max; x++) {
+			for(size_t y = y_min; y < y_max; y++) {
 				if(!img(x, y).first && (*shape)->contains(Point(double(x) + 0.5, double(y) + 0.5))) {
 					img(x, y).first = true;
 					img(x, y).second = (*shape)->get_color();

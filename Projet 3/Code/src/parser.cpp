@@ -195,7 +195,7 @@ token Parser::next_token(const int& incr = 1) {
 void Parser::parse_instr() {
 	token keyword = next_token();
 
-	if(keyword.type != END) {
+	while(keyword.type != END) {
 		string content = keyword.content;
 
 		if(keyword.type != STRING)
@@ -223,6 +223,8 @@ void Parser::parse_instr() {
 			parse_fill();
 		else
 			print_error(keyword, "unknown keyword ('" + content + "').");
+
+		keyword = next_token();
 	}
 }
 
@@ -255,8 +257,6 @@ void Parser::parse_circ() {
 		print_error("Radius of circle must be positive.");
 
 	shapes[name] = make_shared<Circ>(Circ(center, radius));
-
-	parse_instr();
 }
 
 void Parser::parse_elli() {
@@ -277,8 +277,6 @@ void Parser::parse_elli() {
 		print_error("Semi-major radius must be greater than semi-minor radius.");
 
 	shapes[name] = make_shared<Elli>(Elli(center, a, b));
-
-	parse_instr();
 }
 
 void Parser::parse_rect() {
@@ -296,8 +294,6 @@ void Parser::parse_rect() {
 		print_error("Dimensions of rectangle must be positive.");
 
 	shapes[name] = make_shared<Rect>(Rect(center, w, h));
-
-	parse_instr();
 }
 
 void Parser::parse_tri() {
@@ -312,8 +308,6 @@ void Parser::parse_tri() {
 		print_error("Shape name '" + name + "' already defined.");
 
 	shapes[name] = make_shared<Tri>(Tri(v0, v1, v2));
-
-	parse_instr();
 }
 
 void Parser::parse_shift() {
@@ -332,8 +326,6 @@ void Parser::parse_shift() {
 		print_error("Shape '" + shift + "' doesn't exist.");
 
 	shapes[name] = make_shared<Shift>(Shift(t, it->second));
-
-	parse_instr();
 }
 
 void Parser::parse_rot() {
@@ -353,8 +345,6 @@ void Parser::parse_rot() {
 		print_error("Shape '" + rot + "' doesn't exist.");
 
 	shapes[name] = make_shared<Rot>(Rot(angle, r, it->second));
-
-	parse_instr();
 }
 
 void Parser::parse_union() {
@@ -390,8 +380,6 @@ void Parser::parse_union() {
 		print_error(t, "expected '}' (got '" + t.content + "')");
 
 	shapes[name] = make_shared<Union>(Union(union_shapes));
-
-	parse_instr();
 }
 
 void Parser::parse_diff() {
@@ -415,8 +403,6 @@ void Parser::parse_diff() {
 		print_error("Shape '" + shape_out + "' doesn't exist.");
 
 	shapes[name] = make_shared<Diff>(Diff(it_in->second, it_out->second));
-
-	parse_instr();
 }
 
 Color Parser::parse_color_def() {
@@ -480,8 +466,6 @@ void Parser::parse_color() {
 		print_error("Color name '" + name + "' already defined.");
 
 	colors[name] = c;
-
-	parse_instr();
 }
 
 void Parser::parse_fill() {
@@ -495,8 +479,6 @@ void Parser::parse_fill() {
 
 	it->second->set_color(c);
 	fills.push_back(it->second);
-
-	parse_instr();
 }
 
 string Parser::parse_name() {
