@@ -83,7 +83,7 @@ int main(int argc, char* argv[]) {
 
 	Image img(width, height);
 
-	size_t x_min, x_max, y_min, y_max;
+	int x_min, x_max, y_min, y_max;
 	domain dom;
 
 	for(auto shape = fills.rbegin(); shape != fills.rend(); shape++) {
@@ -94,8 +94,8 @@ int main(int argc, char* argv[]) {
 		x_max = min(int(++dom[1].x), int(width));
 		y_max = min(int(++dom[1].y), int(height));
 
-		for(size_t x = x_min; x < x_max; x++) {
-			for(size_t y = y_min; y < y_max; y++) {
+		for(int x = x_min; x < x_max; x++) {
+			for(int y = y_min; y < y_max; y++) {
 				if(!img(x, y).first && (*shape)->contains(Point(double(x) + 0.5, double(y) + 0.5))) {
 					img(x, y).first = true;
 					img(x, y).second = (*shape)->get_color();
