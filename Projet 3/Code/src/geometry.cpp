@@ -1,3 +1,11 @@
+/**
+ * Object-oriented programming project - Project 3
+ * Drawing geometric figures
+ *
+ * @author Maxime Meurisse (m.meurisse@student.uliege.be) - 20161278
+ * @version 2019.05.15
+ */
+
 #include "headers/geometry.hpp"
 
 using namespace std;
