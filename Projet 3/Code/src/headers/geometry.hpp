@@ -19,14 +19,39 @@ struct Point {
 	Point() : x(0), y(0) { }
 	Point(double x, double y) : x(x), y(y) { }
 
+	/**
+	 * The following operators work component by component.
+	 *
+	 * For example, the addition of two points will result in the addition of
+	 * their respective coordinates.
+	 */
 	void operator +=(Point p) { x += p.x; y += p.y; }
 	void operator -=(Point p) { x -= p.x; y -= p.y; }
 	void operator *=(double n) { x *= n; y *= n; }
 	void operator /=(double n) { x /= n; y /= n; }
 
+	/**
+	 * Create a translated point of this point according to point 'p'.
+	 *
+	 * The coordinates of the created point will be given by
+	 *		(x + p.x, y + p.y)
+	 *
+	 * @param p the translation point
+	 * @return a translated point of this point
+	 */
 	Point shift(Point p) const;
+
+	/**
+	 * Create a rotated point of this point around point 'p' of
+	 * an angle 'angle' (in degree).
+	 *
+	 * @param p the center of rotation
+	 * @param angle the angle of rotation (in degree)
+	 * @return a rotated point of this point
+	 */
 	Point rotate(Point p, double angle) const;
 
+	/// Coordinates x and y of the point
 	double x, y;
 };
 
@@ -36,6 +61,10 @@ struct Point {
 /* SHAPE */
 /*********/
 
+/**
+ * The domain of a shape is represented by a rectangular area.
+ * This is represented by the points SW and NE of the rectangle.
+ */
 typedef std::array<Point, 2> domain;
 
 class Shape {
@@ -46,16 +75,65 @@ public:
 	void set_color(Color c) { color = c; }
 	Color get_color() const { return color; }
 
+	/**
+	 * Return the named point 'name' of the shape.
+	 * All named points are defined in the project statement.
+	 *
+	 * This function is pure virtual and is redefined in all children
+	 * of this class.
+	 *
+	 * @param name the name of the named point
+	 * @return a 'Point' representing the named point
+	 */
 	virtual Point get_named_point(std::string name) const = 0;
+
+	/**
+	 * Return the domain of the shape, according to the representation
+	 * of a domain.
+	 *
+	 * This function is pure virtual and is redefined in all children
+	 * of this class.
+	 *
+	 * @return domain the domain of the shape
+	 */
 	virtual domain get_domain() const = 0;
+
+	/**
+	 * Return the domain of the shape according to his vertices.
+	 * This function is mainly usde by polygons.
+	 *
+	 * @param vertices a vector of point containing all vertices of the shape
+	 * @return domain the domain of the shape
+	 */
 	domain get_domain(std::vector<Point> vertices) const;
+
+	/**
+	 * Returns a boolean indicating whether a point is in the shape or not.
+	 *
+	 * This function is pure virtual and is redefined in all children
+	 * of this class.
+	 *
+	 * @param p the point to check
+	 * @return a boolean value indicating if the point is inside the shape or not
+	 */
 	virtual bool contains(Point p) const = 0;
 
 protected:
+	/// The color of the shape (by default, default value of Color)
 	Color color;
 };
 
 /* Primitive shapes */
+
+/**
+ * All the following classes have a private constructor and
+ * are friend with 'Parser' class.
+ *
+ * Only the 'Parser' class can instantiate shapes.
+ *
+ * There is therefore no need to check the validity of the arguments
+ * of each method because the 'Parser' class is already taking care of it.
+ */
 
 /********/
 /* ELLI */
@@ -71,13 +149,22 @@ protected:
 	Elli(Point c, double a, double b) : c(c), a(a), b(b), a2(pow(a, 2)), ab2(pow(a * b, 2)) { }
 	friend class Parser;
 
+	/// Center point
 	Point c;
+
+	/// Semi-major radius (a) and semi-minor radius (b)
+	/// a2 and ab2 are precalculated values
 	double a, b, a2, ab2;
 };
 
 /********/
 /* CIRC */
 /********/
+
+/**
+ * A 'Circ' is a child of 'Elli' simply because a 'Circ' is an 'Elli'
+ * with semi-major radius = semi-minor radius.
+ */
 
 class Circ : public Elli {
 public:
@@ -103,7 +190,10 @@ private:
 	Rect(Point c, double width, double height) : c(c), width(width), height(height), mid_width(width / 2), mid_height(height / 2) { }
 	friend class Parser;
 
+	/// Center point
 	Point c;
+
+	/// mid_width and mid_height are precalculated values
 	double width, height, mid_width, mid_height;
 };
 
@@ -121,6 +211,7 @@ private:
 	Tri(Point v0, Point v1, Point v2) : v0(v0), v1(v1), v2(v2) { }
 	friend class Parser;
 
+	/// The three vertices of the triangle (no matter the order)
 	Point v0, v1, v2;
 };
 
@@ -140,7 +231,12 @@ private:
 	Shift(Point t, std::shared_ptr<Shape> ref_shape) : t(t), t_inv(Point(- t.x, - t.y)), ref_shape(ref_shape) { }
 	friend class Parser;
 
+	/// Point of translation (t) and his inverse (t_inv)
+	/// Inverse point lead to the inverse translation
 	Point t, t_inv;
+
+	/// A reference to the shape to translate
+	/// Note : the original shape will be never translated.
 	std::shared_ptr<Shape> ref_shape;
 };
 
@@ -158,8 +254,14 @@ private:
 	Rot(double angle, Point r, std::shared_ptr<Shape> ref_shape) : angle(angle), r(r), ref_shape(ref_shape) { }
 	friend class Parser;
 
+	/// The angle of rotation
 	double angle;
+
+	/// The center of rotation
 	Point r;
+
+	/// A reference to the shape to rotate
+	/// Note : the original shape will be never rotated.
 	std::shared_ptr<Shape> ref_shape;
 };
 
@@ -177,6 +279,7 @@ private:
 	Union(std::vector<std::shared_ptr<Shape>> shapes) : shapes(shapes) { }
 	friend class Parser;
 
+	/// The vector of references to all shapes composing the union
 	std::vector<std::shared_ptr<Shape>> shapes;
 };
 
@@ -194,6 +297,8 @@ private:
 	Diff(std::shared_ptr<Shape> shape_in, std::shared_ptr<Shape> shape_out) : shape_in(shape_in), shape_out(shape_out) { }
 	friend class Parser;
 
+	/// Reference to the shape to be substracted from (shape_in)
+	/// Reference to the shape to be substracted (shape_out)
 	std::shared_ptr<Shape> shape_in, shape_out;
 };
 

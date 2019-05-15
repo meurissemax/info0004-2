@@ -16,7 +16,7 @@ Point Point::rotate(Point p, double angle) const {
 	double d_x = x - p.x, d_y = y - p.y;
 	double sin_a, cos_a;
 
-	angle *= (M_PI / 180.0);
+	angle *= (M_PI / 180.0); /// conversion to rad
 	sin_a = sin(angle);
 	cos_a = cos(angle);
 
@@ -98,6 +98,7 @@ bool Elli::contains(Point p) const {
 /********/
 
 Point Circ::get_named_point(string name) const {
+	/// 'f1' and 'f2' are not valid named point for 'Circ'.
 	if(name == "f1" || name == "f2")
 		throw invalid_argument("Point doesn't exist.");
 
@@ -172,6 +173,11 @@ domain Tri::get_domain() const {
 	return Shape::get_domain(vertices);
 }
 
+/**
+ * Check on which side of the half-plane created by the edges the point 'p' is.
+ *
+ * Adapted from : https://bit.ly/2Nj0Ft4 (Stack overflow)
+ */
 bool Tri::contains(Point p) const {
 	double d1 = (p.x - v1.x) * (v0.y - v1.y) - (v0.x - v1.x) * (p.y - v1.y);
 	double d2 = (p.x - v2.x) * (v1.y - v2.y) - (v1.x - v2.x) * (p.y - v2.y);
@@ -212,16 +218,19 @@ domain Rot::get_domain() const {
 	domain ref_dom = ref_shape->get_domain();
 	vector<Point> vertices;
 
+	/// We get vertices of the rectangle area (representing the domain).
 	Point v0(ref_dom[0].x, ref_dom[1].y);
 	Point v1(ref_dom[1].x, ref_dom[0].y);
 	Point v2(ref_dom[0].x, ref_dom[0].y);
 	Point v3(ref_dom[1].x, ref_dom[1].y);
 
+	/// We rotate these vertices.
 	vertices.push_back(v0.rotate(r, angle));
 	vertices.push_back(v1.rotate(r, angle));
 	vertices.push_back(v2.rotate(r, angle));
 	vertices.push_back(v3.rotate(r, angle));
 
+	/// We calculate the domain based on the rotated vertices.
 	return Shape::get_domain(vertices);
 }
 
@@ -261,6 +270,7 @@ domain Union::get_domain() const {
 }
 
 bool Union::contains(Point p) const {
+	/// We check if at least one shape contains the point 'p'.
 	for(const auto& shape : shapes)
 		if(shape->contains(p))
 			return true;

@@ -42,6 +42,7 @@ token Parser::create_token(unsigned int line, unsigned int col, string content, 
 	token t = {line, col - content_length, 0, content};
 
 	if(!content.empty()) {
+		/// We look at the type of each character of the content.
 		for(char c : content)
 			if(isalpha(c) || c == '_')
 				nb_char++;
@@ -52,6 +53,7 @@ token Parser::create_token(unsigned int line, unsigned int col, string content, 
 			else if(c == '+' || c == '-')
 				nb_operator++;
 
+		/// Depending of the character types, we determine the type of the token.
 		if(nb_operator == content_length && nb_operator == 1) {
 			t.type = OPERATOR;
 		} else if(nb_digit + nb_point + nb_operator == content_length && nb_point <= 1 && nb_operator <= 1 && nb_digit >= 1) {
@@ -99,24 +101,26 @@ void Parser::convert_token() {
 	if(!file)
 		print_error("Unable to open file.");
 
+	/// We read file line by line.
 	while(getline(file, line_content)) {
 		push_token(create_token(line, col, buffer, file), buffer);
 
 		line++;
 		col = 0;
 
+		/// We read all the character on a line.
 		for(char c : line_content) {
 			col++;
 
-			if(c == '#') {
+			if(c == '#') { /// comment
 				push_token(create_token(line, col, buffer, file), buffer);
 
 				break;
-			} else if(c == char(32)) {
+			} else if(c == char(32)) { /// space
 				push_token(create_token(line, col, buffer, file), buffer);
 
 				continue;
-			} else if(is_in(SPECIAL_CHARS, c)) {
+			} else if(is_in(SPECIAL_CHARS, c)) { /// specials chars
 				push_token(create_token(line, col, buffer, file), buffer);
 
 				buffer = c;
@@ -129,7 +133,7 @@ void Parser::convert_token() {
 					case '*':
 					case '/': push_token(create_token(line, col, OPERATOR, buffer), buffer); break;
 				}
-			} else if(c == '.') {
+			} else if(c == '.') { /// point (".")
 				token t = create_token(line, col, buffer, file);
 
 				if(t.type == STRING) {
@@ -153,7 +157,7 @@ void Parser::convert_token() {
 						buffer += c;
 					}
 				}
-			} else if(c == 'x' || c == 'y') {
+			} else if(c == 'x' || c == 'y') { /// special points
 				if(buffer.back() == '.') {
 					push_token(create_token(line, col, POINT, buffer), buffer);
 

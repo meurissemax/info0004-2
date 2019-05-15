@@ -15,13 +15,18 @@
 using namespace std;
 
 int main(int argc, char* argv[]) {
-	const string VALID_EXT = ".paint";
-	const string SEP = "------------";
+	/* Variable declaration */
 
-	size_t width, height;
-	string input, filename, extension;
-	vector<shared_ptr<Shape>> fills;
+	const string VALID_EXT = ".paint"; /// valid extension of a paint file
+	const string SEPARATOR = "------------";
 
+	size_t width, height; /// dimension of the image
+	string input, filename, extension; /// data about input of the user
+	vector<shared_ptr<Shape>> fills; /// shapes to draw
+
+	/* Input verification */
+
+	/// Number of argument (only one paint file is accepted)
 	if(argc < 2 || argc > 2) {
 		cerr << "Usage : " << argv[0] << " INPUT_FILE" << endl;
 
@@ -30,6 +35,7 @@ int main(int argc, char* argv[]) {
 
 	input = argv[1];
 
+	/// Length of the input (at least the length of the extension)
 	if(input.length() <= VALID_EXT.length()) {
 		cerr << "Invalid input file name." << endl;
 
@@ -38,6 +44,7 @@ int main(int argc, char* argv[]) {
 
 	extension = input.substr(input.length() - VALID_EXT.length(), VALID_EXT.length());
 
+	/// Validity of the extension
 	if(extension != VALID_EXT) {
 		cerr << "Extension of the input file must be '" << VALID_EXT << "'." << endl;
 
@@ -45,6 +52,8 @@ int main(int argc, char* argv[]) {
 	}
 
 	filename = input.substr(0, input.find_last_of('.'));
+
+	/* Parsing the input */
 
 	Parser parser(input);
 
@@ -59,11 +68,13 @@ int main(int argc, char* argv[]) {
 	auto time_parser = chrono::duration <double, milli> (diff).count();
 
 	cout << "DONE in " << time_parser << " ms" << endl;
-	cout << SEP << endl;
+	cout << SEPARATOR << endl;
 
 	parser.print_stats();
 
-	cout << SEP << endl;
+	cout << SEPARATOR << endl;
+
+	/* Filling the image */
 
 	width = parser.get_width();
 	height = parser.get_height();
@@ -71,6 +82,7 @@ int main(int argc, char* argv[]) {
 
 	ofstream outfile(filename + ".ppm", ios::binary);
 
+	/// If an error occurred while creatinf output file
 	if(!outfile) {
 		cerr << "Unable to create output file" << endl;
 
@@ -86,6 +98,7 @@ int main(int argc, char* argv[]) {
 	int x_min, x_max, y_min, y_max;
 	domain dom;
 
+	/// For each shape, we check pixels that are in the domain of the shape.
 	for(auto shape = fills.rbegin(); shape != fills.rend(); shape++) {
 		dom = (*shape)->get_domain();
 

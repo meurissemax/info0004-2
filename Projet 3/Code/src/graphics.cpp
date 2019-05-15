@@ -21,6 +21,13 @@ pair<bool, Color>& Image::operator()(size_t x, size_t y) {
 	return pixels[y * width + x];
 }
 
+pair<bool, Color> Image::operator()(size_t x, size_t y) const {
+	assert(x < width);
+	assert(y < height);
+
+	return pixels[y * width + x];
+}
+
 /*********/
 /* OTHER */
 /*********/
