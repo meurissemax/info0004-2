@@ -47,7 +47,7 @@ struct token {
  */
 class Parser {
 public:
-	Parser() { print_error("A file is required."); }
+	[[noreturn]] Parser();
 	Parser(std::string fname);
 
 	/**
@@ -67,8 +67,8 @@ public:
 	 */
 	void print_stats() const;
 
-	size_t get_width() const { return width; }
-	size_t get_height() const { return height; }
+	size_t get_width() const { return size_t(width); }
+	size_t get_height() const { return size_t(height); }
 	std::vector<std::shared_ptr<Shape>> get_fills() const { return fills; }
 
 private:
@@ -82,12 +82,19 @@ private:
 	unsigned long file_content_pos = 0;
 	unsigned long file_content_size;
 
+	/// Informations about the position of the current token.
+	unsigned long actual_line = 0;
+	unsigned long actual_col = 0;
+
 	/// Informations about shapes and color declared in the paint file.
 	std::map<std::string, std::shared_ptr<Shape>> shapes;
+	std::map<std::string, std::pair<unsigned long, unsigned long>> shapes_name;
+
 	std::map<std::string, Color> colors;
+	std::map<std::string, std::pair<unsigned long, unsigned long>> colors_name;
 
 	/// Final informations to provide to create the PPM image.
-	size_t width, height;
+	double width, height;
 	std::vector<std::shared_ptr<Shape>> fills;
 
 	/****************************/
@@ -103,7 +110,7 @@ private:
 	 * @param file the file to close if an error occured
 	 * @return a token whose type has been determined according to its content
 	 */
-	token create_token(unsigned int line, unsigned int col, std::string content, std::ifstream& file) const;
+	token create_token(unsigned long line, unsigned long col, std::string content, std::ifstream& file) const;
 
 	/**
 	 * Create a token.
@@ -114,7 +121,7 @@ private:
 	 * @param content the content of the token
 	 * @return the created token
 	 */
-	token create_token(unsigned int line, unsigned int col, unsigned int type, std::string content) const;
+	token create_token(unsigned long line, unsigned long col, unsigned int type, std::string content) const;
 
 	/**
 	 * Push the token in the 'file_content' vector.
@@ -138,7 +145,7 @@ private:
 	 * @param incr an increment value that determines the next token that will be return at next call
 	 * @return a token of the 'file_content' vector
 	 */
-	token next_token(const int& incr);
+	token next_token(const unsigned long& incr);
 
 	/*******************/
 	/* Parsing methods */
@@ -179,21 +186,21 @@ private:
 	/***************************/
 
 	/**
-	 * Print a message in the stderr and stops the execution
-	 * of the program with an error code.
-	 *
-	 * @param msg the msg to print in the stderr
-	 */
-	void print_error(const std::string& msg) const;
-
-	/**
 	 * Print a message in the stderr with information about the wrong token,
 	 * according to the format explained in the project guidelines.
 	 *
 	 * @param t the wrong token
 	 * @param msg the msg to print in the stderr
 	 */
-	void print_error(const token& t, const std::string& msg) const;
+	[[noreturn]] void print_error(const token& t, const std::string& msg) const;
+
+	/**
+	 * Print a message in the stderr with information about the wrong token,
+	 * according to the format explained in the project guidelines.
+	 *
+	 * @param msg the msg to print in the stderr
+	 */
+	[[noreturn]] void print_error(const std::string& msg) const;
 
 	/*******************/
 	/* Utility methods */
@@ -202,7 +209,7 @@ private:
 	/**
 	 * Check if a given char is in an array of chars.
 	 *
-	 * @param v the array of chars
+	 * @param a the array of chars
 	 * @param c the char
 	 * @return a boolean value indicating if the char 'c' is in the array of chars 'a'
 	 */

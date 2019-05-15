@@ -109,9 +109,9 @@ int main(int argc, char* argv[]) {
 
 		for(int x = x_min; x < x_max; x++) {
 			for(int y = y_min; y < y_max; y++) {
-				if(!img(x, y).first && (*shape)->contains(Point(double(x) + 0.5, double(y) + 0.5))) {
-					img(x, y).first = true;
-					img(x, y).second = (*shape)->get_color();
+				if(!img(size_t(x), size_t(y)).first && (*shape)->contains(Point(double(x) + 0.5, double(y) + 0.5))) {
+					img(size_t(x), size_t(y)).first = true;
+					img(size_t(x), size_t(y)).second = (*shape)->get_color();
 				}
 			}
 		}

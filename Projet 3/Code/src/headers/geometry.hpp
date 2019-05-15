@@ -17,7 +17,7 @@
 
 struct Point {
 	Point() : x(0), y(0) { }
-	Point(double x, double y) : x(x), y(y) { }
+	Point(double _x, double _y) : x(_x), y(_y) { }
 
 	/**
 	 * The following operators work component by component.
@@ -146,7 +146,7 @@ public:
 	virtual bool contains(Point p) const override;
 
 protected:
-	Elli(Point c, double a, double b) : c(c), a(a), b(b), a2(pow(a, 2)), ab2(pow(a * b, 2)) { }
+	Elli(Point _c, double _a, double _b) : c(_c), a(_a), b(_b), a2(pow(_a, 2)), ab2(pow(_a * _b, 2)) { }
 	friend class Parser;
 
 	/// Center point
@@ -172,7 +172,7 @@ public:
 	bool contains(Point p) const override;
 
 private:
-	Circ(Point c, double radius) : Elli(c, radius, radius) { }
+	Circ(Point _c, double _radius) : Elli(_c, _radius, _radius) { }
 	friend class Parser;
 };
 
@@ -187,7 +187,7 @@ public:
 	bool contains(Point p) const override;
 
 private:
-	Rect(Point c, double width, double height) : c(c), width(width), height(height), mid_width(width / 2), mid_height(height / 2) { }
+	Rect(Point _c, double _width, double _height) : c(_c), width(_width), height(_height), mid_width(_width / 2), mid_height(_height / 2) { }
 	friend class Parser;
 
 	/// Center point
@@ -208,7 +208,7 @@ public:
 	bool contains(Point p) const override;
 
 private:
-	Tri(Point v0, Point v1, Point v2) : v0(v0), v1(v1), v2(v2) { }
+	Tri(Point _v0, Point _v1, Point _v2) : v0(_v0), v1(_v1), v2(_v2) { }
 	friend class Parser;
 
 	/// The three vertices of the triangle (no matter the order)
@@ -228,7 +228,7 @@ public:
 	bool contains(Point p) const override;
 
 private:
-	Shift(Point t, std::shared_ptr<Shape> ref_shape) : t(t), t_inv(Point(- t.x, - t.y)), ref_shape(ref_shape) { }
+	Shift(Point _t, std::shared_ptr<Shape> _ref_shape) : t(_t), t_inv(Point(- _t.x, - _t.y)), ref_shape(_ref_shape) { }
 	friend class Parser;
 
 	/// Point of translation (t) and his inverse (t_inv)
@@ -251,7 +251,7 @@ public:
 	bool contains(Point p) const override;
 
 private:
-	Rot(double angle, Point r, std::shared_ptr<Shape> ref_shape) : angle(angle), r(r), ref_shape(ref_shape) { }
+	Rot(double _angle, Point _r, std::shared_ptr<Shape> _ref_shape) : angle(_angle), r(_r), ref_shape(_ref_shape) { }
 	friend class Parser;
 
 	/// The angle of rotation
@@ -276,7 +276,7 @@ public:
 	bool contains(Point p) const override;
 
 private:
-	Union(std::vector<std::shared_ptr<Shape>> shapes) : shapes(shapes) { }
+	Union(std::vector<std::shared_ptr<Shape>> _shapes) : shapes(_shapes) { }
 	friend class Parser;
 
 	/// The vector of references to all shapes composing the union
@@ -294,7 +294,7 @@ public:
 	bool contains(Point p) const override;
 
 private:
-	Diff(std::shared_ptr<Shape> shape_in, std::shared_ptr<Shape> shape_out) : shape_in(shape_in), shape_out(shape_out) { }
+	Diff(std::shared_ptr<Shape> _shape_in, std::shared_ptr<Shape> _shape_out) : shape_in(_shape_in), shape_out(_shape_out) { }
 	friend class Parser;
 
 	/// Reference to the shape to be substracted from (shape_in)
