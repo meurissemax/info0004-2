@@ -250,7 +250,7 @@ token Parser::next_token(const int& incr = 1) {
 void Parser::parse_instr() {
 	token keyword = next_token();
 
-	if(keyword.type != END) {
+	while(keyword.type != END) {
 		string content = keyword.content;
 
 		if(keyword.type != STRING)
@@ -276,6 +276,8 @@ void Parser::parse_instr() {
 			parse_fill();
 		else
 			print_error(keyword, "unknown keyword ('" + content + "').");
+
+		token keyword = next_token();
 	}
 }
 
@@ -301,8 +303,6 @@ void Parser::parse_circ() {
 	parse_name(NEW_SHAPE);
 	parse_point();
 	parse_number();
-
-	parse_instr();
 }
 
 /**
@@ -314,8 +314,6 @@ void Parser::parse_rect() {
 	parse_point();
 	parse_number();
 	parse_number();
-
-	parse_instr();
 }
 
 /**
@@ -327,8 +325,6 @@ void Parser::parse_tri() {
 	parse_point();
 	parse_point();
 	parse_point();
-
-	parse_instr();
 }
 
 /**
@@ -339,8 +335,6 @@ void Parser::parse_shift() {
 	parse_name(NEW_SHAPE);
 	parse_point();
 	parse_name(CHECK_SHAPE);
-
-	parse_instr();
 }
 
 /**
@@ -352,8 +346,6 @@ void Parser::parse_rot() {
 	parse_number();
 	parse_point();
 	parse_name(CHECK_SHAPE);
-
-	parse_instr();
 }
 
 /**
@@ -377,8 +369,6 @@ void Parser::parse_union() {
 
 	if(t.type != CLOSE_BRACE)
 		print_error(t, "expected '}' (got '" + t.content + "')");
-
-	parse_instr();
 }
 
 /**
@@ -389,8 +379,6 @@ void Parser::parse_diff() {
 	parse_name(NEW_SHAPE);
 	parse_name(CHECK_SHAPE);
 	parse_name(CHECK_SHAPE);
-
-	parse_instr();
 }
 
 /**
@@ -426,8 +414,6 @@ void Parser::parse_color_def() {
 void Parser::parse_color() {
 	parse_name(NEW_COLOR);
 	parse_color_def();
-
-	parse_instr();
 }
 
 /**
@@ -437,8 +423,6 @@ void Parser::parse_color() {
 void Parser::parse_fill() {
 	parse_name(NEW_FILL);
 	parse_color_def();
-
-	parse_instr();
 }
 
 /**
