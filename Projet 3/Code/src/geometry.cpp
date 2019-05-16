@@ -3,7 +3,7 @@
  * Drawing geometric figures
  *
  * @author Maxime Meurisse (m.meurisse@student.uliege.be) - 20161278
- * @version 2019.05.15
+ * @version 2019.05.16
  */
 
 #include "headers/geometry.hpp"
@@ -20,13 +20,8 @@ Point Point::shift(Point p) const {
 	return Point(x + p.x, y + p.y);
 }
 
-Point Point::rotate(Point p, double angle) const {
+Point Point::rotate(Point p, double sin_a, double cos_a) const {
 	double d_x = x - p.x, d_y = y - p.y;
-	double sin_a, cos_a;
-
-	angle *= (M_PI / 180.0); /// conversion to rad
-	sin_a = sin(angle);
-	cos_a = cos(angle);
 
 	return Point(d_x * cos_a - d_y * sin_a + p.x, d_x * sin_a + d_y * cos_a + p.y);
 }
@@ -64,9 +59,6 @@ domain Shape::get_domain(vector<Point> vertices) const {
 /********/
 
 Point Elli::get_named_point(string name) const {
-	double incr = M_SQRT2 / 2;
-	double d_f = sqrt(pow(a, 2) - pow(b, 2));
-
 	if(name == "c")
 		return c;
 	else if(name == "nw")
@@ -156,6 +148,19 @@ bool Rect::contains(Point p) const {
 /* TRI */
 /*******/
 
+Tri::Tri(Point _v0, Point _v1, Point _v2) {
+	v0 = _v0;
+	v1 = _v1;
+	v2 = _v2;
+
+	pre[0] = _v0.y - _v1.y;
+	pre[1] = _v1.y - _v2.y;
+	pre[2] = _v2.y - _v0.y;
+	pre[3] = _v0.x - _v1.x;
+	pre[4] = _v1.x - _v2.x;
+	pre[5] = _v2.x - _v0.x;
+}
+
 Point Tri::get_named_point(string name) const {
 	if(name == "c")
 		return Point((v0.x + v1.x + v2.x) / 3, (v0.y + v1.y + v2.y) / 3);
@@ -187,9 +192,9 @@ domain Tri::get_domain() const {
  * Adapted from : https://bit.ly/2Nj0Ft4 (Stack overflow)
  */
 bool Tri::contains(Point p) const {
-	double d1 = (p.x - v1.x) * (v0.y - v1.y) - (v0.x - v1.x) * (p.y - v1.y);
-	double d2 = (p.x - v2.x) * (v1.y - v2.y) - (v1.x - v2.x) * (p.y - v2.y);
-	double d3 = (p.x - v0.x) * (v2.y - v0.y) - (v2.x - v0.x) * (p.y - v0.y);
+	double d1 = (p.x - v1.x) * pre[0] - pre[3] * (p.y - v1.y);
+	double d2 = (p.x - v2.x) * pre[1] - pre[4] * (p.y - v2.y);
+	double d3 = (p.x - v0.x) * pre[2] - pre[5] * (p.y - v0.y);
 
 	return !(((d1 < 0) || (d2 < 0) || (d3 < 0)) && ((d1 > 0) || (d2 > 0) || (d3 > 0)));
 }
@@ -219,7 +224,7 @@ bool Shift::contains(Point p) const {
 /*******/
 
 Point Rot::get_named_point(string name) const {
-	return (ref_shape->get_named_point(name)).rotate(r, angle);
+	return (ref_shape->get_named_point(name)).rotate(r, sin_a, cos_a);
 }
 
 domain Rot::get_domain() const {
@@ -233,17 +238,17 @@ domain Rot::get_domain() const {
 	Point v3(ref_dom[1].x, ref_dom[1].y);
 
 	/// We rotate these vertices.
-	vertices.push_back(v0.rotate(r, angle));
-	vertices.push_back(v1.rotate(r, angle));
-	vertices.push_back(v2.rotate(r, angle));
-	vertices.push_back(v3.rotate(r, angle));
+	vertices.push_back(v0.rotate(r, sin_a, cos_a));
+	vertices.push_back(v1.rotate(r, sin_a, cos_a));
+	vertices.push_back(v2.rotate(r, sin_a, cos_a));
+	vertices.push_back(v3.rotate(r, sin_a, cos_a));
 
 	/// We calculate the domain based on the rotated vertices.
 	return Shape::get_domain(vertices);
 }
 
 bool Rot::contains(Point p) const {
-	return ref_shape->contains(p.rotate(r, - angle));
+	return ref_shape->contains(p.rotate(r, - sin_a, cos_a));
 }
 
 /*********/
@@ -299,5 +304,5 @@ domain Diff::get_domain() const {
 }
 
 bool Diff::contains(Point p) const {
-	return shape_in->contains(p) && !shape_out->contains(p);
+	return !shape_out->contains(p) && shape_in->contains(p);
 }

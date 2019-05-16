@@ -3,7 +3,7 @@
  * Drawing geometric figures
  *
  * @author Maxime Meurisse (m.meurisse@student.uliege.be) - 20161278
- * @version 2019.05.15
+ * @version 2019.05.16
  */
 
 #ifndef GEOMETRY_HPP
@@ -11,9 +11,9 @@
 
 #include <array>
 #include <string>
+#include <vector>
 #include <cmath>
 #include <memory>
-#include <vector>
 
 #include "graphics.hpp"
 
@@ -51,13 +51,14 @@ struct Point {
 
 	/**
 	 * Create a rotated point of this point around point 'p' of
-	 * an angle 'angle' (in degree).
+	 * an angle 'a'.
 	 *
 	 * @param p the center of rotation
-	 * @param angle the angle of rotation (in degree)
+	 * @param sin_a the sinus of the angle 'a'
+	 * @param cos_a the cosinus of the angle 'a'
 	 * @return a rotated point of this point
 	 */
-	Point rotate(Point p, double angle) const;
+	Point rotate(Point p, double sin_a, double cos_a) const;
 
 	/// Coordinates x and y of the point
 	double x, y;
@@ -154,15 +155,15 @@ public:
 	virtual bool contains(Point p) const override;
 
 protected:
-	Elli(Point _c, double _a, double _b) : c(_c), a(_a), b(_b), a2(pow(_a, 2)), ab2(pow(_a * _b, 2)) { }
+	Elli(Point _c, double _a, double _b) : c(_c), a(_a), b(_b), a2(pow(_a, 2)), ab2(pow(_a * _b, 2)), incr(M_SQRT2 / 2), d_f(sqrt(pow(a, 2) - pow(b, 2))) { }
 	friend class Parser;
 
 	/// Center point
 	Point c;
 
 	/// Semi-major radius (a) and semi-minor radius (b)
-	/// a2 and ab2 are precalculated values
-	double a, b, a2, ab2;
+	/// a2, ab2, incr and d_f are precalculated values
+	double a, b, a2, ab2, incr, d_f;
 };
 
 /********/
@@ -216,11 +217,14 @@ public:
 	bool contains(Point p) const override;
 
 private:
-	Tri(Point _v0, Point _v1, Point _v2) : v0(_v0), v1(_v1), v2(_v2) { }
+	Tri(Point _v0, Point _v1, Point _v2);
 	friend class Parser;
 
 	/// The three vertices of the triangle (no matter the order)
 	Point v0, v1, v2;
+
+	/// Pre-calculated values
+	std::array<double, 6> pre;
 };
 
 /* Derived shapes */
@@ -259,11 +263,11 @@ public:
 	bool contains(Point p) const override;
 
 private:
-	Rot(double _angle, Point _r, std::shared_ptr<Shape> _ref_shape) : angle(_angle), r(_r), ref_shape(_ref_shape) { }
+	Rot(double _angle, Point _r, std::shared_ptr<Shape> _ref_shape) : sin_a(sin(_angle * M_PI / 180.0)), cos_a(cos(_angle * M_PI / 180.0)), r(_r), ref_shape(_ref_shape) { }
 	friend class Parser;
 
-	/// The angle of rotation
-	double angle;
+	/// Sinus and cosinus of the angle of rotation
+	double sin_a, cos_a;
 
 	/// The center of rotation
 	Point r;
