@@ -9,3 +9,9 @@ Projects realized as part of the *Projet de programmation orientée-objet* cours
 ## Author
 
 * **Maxime Meurisse** - [meurissemax](https://github.com/meurissemax)
+
+## Scores
+
+* Project 1 received a score of **A**.
+* Project 2 received a score of **19/20**.
+* Project 3 received a score of **18/20**.
