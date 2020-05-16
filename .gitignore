@@ -1,11 +1,15 @@
+##########
+# System #
+##########
+
+# macOS
 .DS_Store
 
-Projet 1/Code/bin/
-Projet 1/Code/outputs/
 
-Projet 2/Code/bin/
-Projet 2/Code/examples/
+############
+# Projects #
+############
 
-Projet 3/Code/bin/
-Projet 3/Code/examples/
-Projet 3/Code/ppm-check/
+**/bin/
+**/outputs/
+**/examples/
